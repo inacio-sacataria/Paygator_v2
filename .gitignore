@@ -41,3 +41,4 @@ docker-compose.override.yml
 
 # Postman environments (não a coleção)
 *.postman_environment.json
+Paygator_API_Postman_Collection.json
