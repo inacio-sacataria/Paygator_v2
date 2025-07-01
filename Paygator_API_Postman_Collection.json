@@ -1,0 +1,675 @@
+{
+  "info": {
+    "name": "Paygator API Collection",
+    "description": "Coleção completa da API Paygator - Clone do Playfood Payment Provider",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "your-api-key-here",
+      "type": "string"
+    },
+    {
+      "key": "playfoodApiKey",
+      "value": "your-playfood-api-key-here",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "X-API-Key",
+        "value": "{{apiKey}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"pay_123456789\",\n  \"externalPaymentId\": 123456789,\n  \"paymentMethod\": \"credit_card\",\n  \"paymentMethodId\": \"pm_123456789\",\n  \"amount\": 100.50,\n  \"currency\": \"BRL\",\n  \"customer\": {\n    \"email\": \"customer@example.com\",\n    \"phone\": \"+5511999999999\",\n    \"name\": \"João Silva\",\n    \"billingAddress\": {\n      \"countryCode\": \"BR\",\n      \"stateCode\": \"SP\",\n      \"city\": \"São Paulo\",\n      \"postcode\": \"01234-567\",\n      \"street1\": \"Rua das Flores, 123\",\n      \"street2\": \"Apto 45\"\n    },\n    \"external\": {\n      \"id\": \"cust_123456789\",\n      \"data\": {\n        \"customerType\": \"individual\"\n      }\n    }\n  },\n  \"locale\": \"pt-BR\",\n  \"returnUrl\": \"https://example.com/return\",\n  \"orderDetails\": {\n    \"orderId\": \"order_123456789\",\n    \"public\": {\n      \"vendorId\": \"vendor_123456789\",\n      \"vendorName\": \"Restaurante Exemplo\",\n      \"cartTotal\": 100.50,\n      \"deliveryTotal\": 10.00,\n      \"taxTotal\": 5.00,\n      \"serviceFeeTotal\": 2.50,\n      \"discountTotal\": 0.00\n    },\n    \"internal\": {\n      \"vendorMerchant\": {\n        \"id\": \"merchant_123456789\",\n        \"externalId\": \"ext_123456789\",\n        \"businessType\": \"COMPANY\",\n        \"taxId\": \"12.345.678/0001-90\",\n        \"name\": \"Restaurante Exemplo Ltda\",\n        \"address\": {\n          \"addressLine\": \"Rua do Comércio, 456\",\n          \"city\": \"São Paulo\",\n          \"countryCode\": \"BR\",\n          \"zip\": \"01234-567\"\n        },\n        \"phone\": \"+5511888888888\",\n        \"email\": \"contato@restaurante.com\",\n        \"active\": true,\n        \"data\": {\n          \"companyData\": {\n            \"industry\": \"food\"\n          },\n          \"merchantData\": {\n            \"category\": \"restaurant\"\n          }\n        }\n      },\n      \"vendorShare\": 0.85\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "create"]
+            },
+            "description": "Cria um novo pagamento e retorna link do iframe para processamento"
+          }
+        },
+        {
+          "name": "Get Payment Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/status/pay_123456789",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "status", "pay_123456789"]
+            },
+            "description": "Obtém o status de um pagamento específico"
+          }
+        },
+        {
+          "name": "Cancel Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer requested cancellation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/payments/cancel/pay_123456789",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "payments", "cancel", "pay_123456789"]
+            },
+            "description": "Cancela um pagamento pendente"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Playfood Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order_123456789\",\n  \"customer\": {\n    \"name\": \"João Silva\",\n    \"email\": \"joao@example.com\",\n    \"phone\": \"+5511999999999\",\n    \"address\": {\n      \"street\": \"Rua das Flores, 123\",\n      \"city\": \"São Paulo\",\n      \"state\": \"SP\",\n      \"zipCode\": \"01234-567\",\n      \"country\": \"BR\"\n    }\n  },\n  \"items\": [\n    {\n      \"name\": \"Hambúrguer Clássico\",\n      \"quantity\": 2,\n      \"unitPrice\": 25.00,\n      \"totalPrice\": 50.00,\n      \"description\": \"Hambúrguer com queijo e salada\"\n    },\n    {\n      \"name\": \"Batata Frita\",\n      \"quantity\": 1,\n      \"unitPrice\": 15.00,\n      \"totalPrice\": 15.00,\n      \"description\": \"Porção de batata frita\"\n    }\n  ],\n  \"totalAmount\": 65.00,\n  \"deliveryFee\": 5.00,\n  \"estimatedDeliveryTime\": \"2024-01-15T19:30:00Z\",\n  \"notes\": \"Sem cebola no hambúrguer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "orders"]
+            },
+            "description": "Cria um novo pedido no sistema Playfood"
+          }
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/orders?page=1&limit=10&status=pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "orders"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            },
+            "description": "Lista pedidos com paginação e filtros"
+          }
+        },
+        {
+          "name": "Get Order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/orders/order_123456789",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "orders", "order_123456789"]
+            },
+            "description": "Obtém detalhes de um pedido específico"
+          }
+        },
+        {
+          "name": "Update Order",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"preparing\",\n  \"estimatedDeliveryTime\": \"2024-01-15T20:00:00Z\",\n  \"notes\": \"Pedido em preparação\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/orders/order_123456789",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "orders", "order_123456789"]
+            },
+            "description": "Atualiza um pedido existente"
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Item indisponível\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/orders/order_123456789/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "orders", "order_123456789", "cancel"]
+            },
+            "description": "Cancela um pedido"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Playfood Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order_123456789\",\n  \"amount\": 65.00,\n  \"currency\": \"BRL\",\n  \"paymentMethod\": \"credit_card\",\n  \"customer\": {\n    \"name\": \"João Silva\",\n    \"email\": \"joao@example.com\",\n    \"phone\": \"+5511999999999\"\n  },\n  \"returnUrl\": \"https://example.com/return\",\n  \"cancelUrl\": \"https://example.com/cancel\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/payments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "payments"]
+            },
+            "description": "Cria um pagamento para um pedido Playfood"
+          }
+        },
+        {
+          "name": "List Payments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/payments?page=1&limit=10&status=completed",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "payments"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "completed"
+                }
+              ]
+            },
+            "description": "Lista pagamentos com paginação e filtros"
+          }
+        },
+        {
+          "name": "Get Payment",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/payments/payment_123456789",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "payments", "payment_123456789"]
+            },
+            "description": "Obtém detalhes de um pagamento específico"
+          }
+        },
+        {
+          "name": "Refund Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 65.00,\n  \"reason\": \"Customer requested refund\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/payments/payment_123456789/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "payments", "payment_123456789", "refund"]
+            },
+            "description": "Estorna um pagamento"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Playfood Payment Provider",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"pay_123456789\",\n  \"amount\": 100.50,\n  \"currency\": \"BRL\",\n  \"customer\": {\n    \"email\": \"customer@example.com\",\n    \"phone\": \"+5511999999999\",\n    \"name\": \"João Silva\"\n  },\n  \"locale\": \"pt-BR\",\n  \"returnUrl\": \"https://example.com/return\",\n  \"orderDetails\": {\n    \"orderId\": \"order_123456789\",\n    \"items\": [\n      {\n        \"name\": \"Produto 1\",\n        \"quantity\": 2,\n        \"unitPrice\": 50.25\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood-payments/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood-payments", "create"]
+            },
+            "description": "Cria um pagamento usando o provedor Playfood"
+          }
+        },
+        {
+          "name": "Get Payment Info",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"pay_123456789\",\n  \"externalPayment\": {\n    \"id\": \"ext_pay_123456789\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood-payments/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood-payments", "info"]
+            },
+            "description": "Obtém informações detalhadas de um pagamento"
+          }
+        },
+        {
+          "name": "Capture Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"pay_123456789\",\n  \"externalPayment\": {\n    \"id\": \"ext_pay_123456789\"\n  },\n  \"amountToCapture\": 100.50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood-payments/capture",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood-payments", "capture"]
+            },
+            "description": "Captura um pagamento autorizado"
+          }
+        },
+        {
+          "name": "Refund Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"pay_123456789\",\n  \"externalPayment\": {\n    \"id\": \"ext_pay_123456789\"\n  },\n  \"amountToRefund\": 50.25,\n  \"reason\": \"Customer requested partial refund\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood-payments/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood-payments", "refund"]
+            },
+            "description": "Estorna um pagamento"
+          }
+        },
+        {
+          "name": "Register Merchant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"merchant_123456789\",\n  \"businessName\": \"Restaurante Exemplo Ltda\",\n  \"taxId\": \"12.345.678/0001-90\",\n  \"address\": {\n    \"street\": \"Rua do Comércio, 456\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"zipCode\": \"01234-567\",\n    \"country\": \"BR\"\n  },\n  \"contact\": {\n    \"email\": \"contato@restaurante.com\",\n    \"phone\": \"+5511888888888\"\n  },\n  \"bankAccount\": {\n    \"bankCode\": \"001\",\n    \"agency\": \"1234\",\n    \"account\": \"12345678\",\n    \"accountType\": \"checking\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood-payments/merchant/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood-payments", "merchant", "register"]
+            },
+            "description": "Registra um novo comerciante"
+          }
+        },
+        {
+          "name": "Create Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"merchantId\": \"merchant_123456789\",\n  \"amount\": 1000.00,\n  \"currency\": \"BRL\",\n  \"description\": \"Transferência de vendas da semana\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood-payments/transfer/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood-payments", "transfer", "create"]
+            },
+            "description": "Cria uma transferência para um comerciante"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Process Payment Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Signature",
+                "value": "sha256=abc123..."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"payment.succeeded\",\n  \"data\": {\n    \"paymentId\": \"pay_123456789\",\n    \"amount\": 100.50,\n    \"currency\": \"BRL\",\n    \"status\": \"succeeded\",\n    \"timestamp\": \"2024-01-15T18:30:00Z\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/webhooks/payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "webhooks", "payment"]
+            },
+            "description": "Processa webhook de pagamento (requer assinatura válida)"
+          }
+        },
+        {
+          "name": "Process Playfood Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Playfood-Signature",
+                "value": "sha256=def456..."
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"order.updated\",\n  \"data\": {\n    \"orderId\": \"order_123456789\",\n    \"status\": \"preparing\",\n    \"timestamp\": \"2024-01-15T18:30:00Z\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "webhooks"]
+            },
+            "description": "Processa webhook do Playfood (requer assinatura válida)"
+          }
+        },
+        {
+          "name": "Create Webhook Config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/webhooks/payment\",\n  \"events\": [\"payment.succeeded\", \"payment.failed\"],\n  \"secret\": \"webhook-secret-key\",\n  \"description\": \"Webhook para notificações de pagamento\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/webhooks/configure",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "webhooks", "configure"]
+            },
+            "description": "Configura um novo webhook"
+          }
+        },
+        {
+          "name": "List Webhook Configs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/webhooks/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "webhooks", "list"]
+            },
+            "description": "Lista todas as configurações de webhook"
+          }
+        },
+        {
+          "name": "Update Webhook Config",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/webhooks/payment-updated\",\n  \"events\": [\"payment.succeeded\", \"payment.failed\", \"payment.refunded\"],\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/webhooks/webhook_123456789",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "webhooks", "webhook_123456789"]
+            },
+            "description": "Atualiza uma configuração de webhook"
+          }
+        },
+        {
+          "name": "Delete Webhook Config",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/webhooks/webhook_123456789",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "webhooks", "webhook_123456789"]
+            },
+            "description": "Remove uma configuração de webhook"
+          }
+        },
+        {
+          "name": "Get Webhook Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/webhooks/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "webhooks", "status"]
+            },
+            "description": "Obtém o status dos webhooks"
+          }
+        },
+        {
+          "name": "Get Webhook Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/webhooks/logs?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "webhooks", "logs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Obtém logs de webhooks"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Status & Health",
+      "item": [
+        {
+          "name": "Get Playfood Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{playfoodApiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood", "status"]
+            },
+            "description": "Verifica o status da API Playfood"
+          }
+        },
+        {
+          "name": "Get Payment Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/playfood-payments/settings/payment_123456789",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "playfood-payments", "settings", "payment_123456789"]
+            },
+            "description": "Obtém configurações de pagamento"
+          }
+        }
+      ]
+    }
+  ]
+} 

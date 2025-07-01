@@ -1,0 +1,43 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables
+.env
+.env.*
+*.local
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Docker
+*.pid
+*.seed
+docker-compose.override.yml
+
+# Misc
+*.tgz
+*.swp
+*.bak
+*.tmp
+
+# Postman environments (não a coleção)
+*.postman_environment.json
