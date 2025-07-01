@@ -18,6 +18,9 @@ COPY . .
 # Build do projeto
 RUN npm run build
 
+# Gere e exiba uma chave de API main no build
+RUN node -e "const crypto = require('crypto'); console.log('=============================='); console.log('API Key gerada para uso: main_' + crypto.randomBytes(32).toString('hex')); console.log('==============================')"
+
 # Etapa 2: Produção
 FROM node:18-alpine
 
