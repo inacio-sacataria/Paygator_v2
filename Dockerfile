@@ -19,7 +19,7 @@ COPY . .
 RUN npm run build
 
 # Gere e exiba uma chave de API main no build
-RUN node -e "const crypto = require('crypto'); console.log('=============================='); console.log('API Key gerada para uso: main_' + crypto.randomBytes(32).toString('hex')); console.log('==============================')"
+RUN node -e "console.log('main_' + require('crypto').randomBytes(32).toString('hex'))"
 
 # Etapa 2: Produção
 FROM node:18-alpine
@@ -31,6 +31,8 @@ RUN apk add --no-cache python3 make g++
 # Copie apenas os arquivos necessários da etapa de build
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/dist ./dist
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Instale apenas dependências de produção
 RUN npm ci --only=production
@@ -45,4 +47,4 @@ USER nodejs
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+ENTRYPOINT ["/app/entrypoint.sh"]
