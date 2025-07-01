@@ -1,41 +1,48 @@
-# Use Node.js 18 Alpine as base image
-FROM node:18-alpine
+# Etapa 1: Build
+FROM node:18-alpine AS build
 
-# Set working directory
 WORKDIR /app
 
-# Install dependencies for native modules
+# Dependências nativas (se necessário)
 RUN apk add --no-cache python3 make g++
 
-# Copy package files
+# Copie apenas os arquivos de dependência primeiro
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Instale TODAS as dependências (incluindo dev)
+RUN npm ci
 
-# Copy source code
+# Copie o restante do código
 COPY . .
 
-# Build the application
+# Build do projeto
 RUN npm run build
 
-# Create logs directory
-RUN mkdir -p logs
+# Etapa 2: Produção
+FROM node:18-alpine
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+WORKDIR /app
 
-# Change ownership of the app directory
+# Dependências nativas (se necessário)
+RUN apk add --no-cache python3 make g++
+
+# Copie apenas os arquivos necessários da etapa de build
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/logs ./logs
+
+# Instale apenas dependências de produção
+RUN npm ci --only=production
+
+# Crie usuário não-root
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node healthcheck.js
+# Remova o healthcheck se não tiver healthcheck.js
+# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+#   CMD node healthcheck.js
 
-# Start the application
 CMD ["npm", "start"] 
