@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagamentos - Paygator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f8fafc;
+      color: #334155;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background: #1e293b;
+      color: white;
+      padding: 2rem 0;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo {
+      padding: 0 2rem 2rem;
+      border-bottom: 1px solid #334155;
+      margin-bottom: 2rem;
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #3b82f6;
+    }
+
+    .nav-menu {
+      list-style: none;
+    }
+
+    .nav-item {
+      margin-bottom: 0.5rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 2rem;
+      color: #cbd5e1;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      background: #334155;
+      color: white;
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 0.75rem;
+      fill: currentColor;
+    }
+
+    .main-content {
+      flex: 1;
+      margin-left: 250px;
+      padding: 2rem;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logout-btn {
+      padding: 0.5rem 1rem;
+      background: #ef4444;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .logout-btn:hover {
+      background: #dc2626;
+    }
+
+    .filters {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+      margin-bottom: 1.5rem;
+    }
+
+    .filters-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filter-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .filter-input,
+    .filter-select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transition: border-color 0.2s;
+    }
+
+    .filter-input:focus,
+    .filter-select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .filter-btn {
+      padding: 0.5rem 1rem;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .filter-btn:hover {
+      background: #2563eb;
+    }
+
+    .table-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table th {
+      background: #f8fafc;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .table td {
+      padding: 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.875rem;
+    }
+
+    .table tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    .status-approved {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-failed {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-cancelled {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .status-refunded {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+
+    .payment-method {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .method-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: #64748b;
+    }
+
+    .amount {
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .payment-id {
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      font-size: 0.8125rem;
+      color: #64748b;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .pagination-info {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .pagination-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .pagination-btn {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      background: white;
+      color: #374151;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+
+    .pagination-btn:hover:not(.disabled) {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+
+    .pagination-btn.active {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+
+    .pagination-btn.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #64748b;
+    }
+
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1rem;
+      opacity: 0.3;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        position: relative;
+        height: auto;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+      }
+
+      .filters-row {
+        grid-template-columns: 1fr;
+      }
+
+      .table-container {
+        overflow-x: auto;
+      }
+
+      .table {
+        min-width: 800px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-text">Paygator</div>
+      </div>
+      <nav>
+        <ul class="nav-menu">
+          <li class="nav-item">
+            <a href="/admin/" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+              </svg>
+              Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/payments" class="nav-link active">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+              </svg>
+              Pagamentos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/orders" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+              Pedidos
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="header">
+        <h1 class="page-title">Payments overview</h1>
+        <div class="user-menu">
+          <a href="/admin/logout" class="logout-btn">Sair</a>
+        </div>
+      </header>
+
+      <div class="filters">
+        <form method="GET" action="/admin/payments">
+          <div class="filters-row">
+            <div class="filter-group">
+              <label class="filter-label">Date range</label>
+              <input type="date" name="dateFrom" class="filter-input" value="<%= filters.dateFrom || '' %>">
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">até</label>
+              <input type="date" name="dateTo" class="filter-input" value="<%= filters.dateTo || '' %>">
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">Status</label>
+              <select name="status" class="filter-select">
+                <option value="">Todos</option>
+                <option value="approved" <%= filters.status === 'approved' ? 'selected' : '' %>>Aprovado</option>
+                <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>>Pendente</option>
+                <option value="failed" <%= filters.status === 'failed' ? 'selected' : '' %>>Falhou</option>
+                <option value="cancelled" <%= filters.status === 'cancelled' ? 'selected' : '' %>>Cancelado</option>
+                <option value="refunded" <%= filters.status === 'refunded' ? 'selected' : '' %>>Reembolsado</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">Method</label>
+              <select name="method" class="filter-select">
+                <option value="">Todos</option>
+                <option value="credit_card" <%= filters.method === 'credit_card' ? 'selected' : '' %>>Cartão de Crédito</option>
+                <option value="debit_card" <%= filters.method === 'debit_card' ? 'selected' : '' %>>Cartão de Débito</option>
+                <option value="pix" <%= filters.method === 'pix' ? 'selected' : '' %>>PIX</option>
+                <option value="cash" <%= filters.method === 'cash' ? 'selected' : '' %>>Dinheiro</option>
+                <option value="online" <%= filters.method === 'online' ? 'selected' : '' %>>Online</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <button type="submit" class="filter-btn">Filtrar</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="table-container">
+        <% if (payments && payments.length > 0) { %>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Payment ID</th>
+                <th>Status</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Creation Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% payments.forEach(payment => { %>
+                <tr>
+                  <td>
+                    <div class="payment-id"><%= payment.order_id || payment._id %></div>
+                  </td>
+                  <td>
+                    <span class="status-badge status-<%= payment.status %>">
+                      <%= payment.status %>
+                    </span>
+                  </td>
+                  <td>
+                    <div class="amount">R$ <%= (payment.amount / 100).toLocaleString('pt-BR') %></div>
+                  </td>
+                  <td>
+                    <div class="payment-method">
+                      <div class="method-icon">
+                        <% if (payment.payment_method === 'credit_card') { %>CC<% } %>
+                        <% if (payment.payment_method === 'debit_card') { %>DC<% } %>
+                        <% if (payment.payment_method === 'pix') { %>PIX<% } %>
+                        <% if (payment.payment_method === 'cash') { %>$<% } %>
+                        <% if (payment.payment_method === 'online') { %>ON<% } %>
+                      </div>
+                      <% if (payment.payment_method === 'credit_card') { %>Cartão de Crédito<% } %>
+                      <% if (payment.payment_method === 'debit_card') { %>Cartão de Débito<% } %>
+                      <% if (payment.payment_method === 'pix') { %>PIX<% } %>
+                      <% if (payment.payment_method === 'cash') { %>Dinheiro<% } %>
+                      <% if (payment.payment_method === 'online') { %>Online<% } %>
+                    </div>
+                  </td>
+                  <td>
+                    <%= new Date(payment.created_at).toLocaleDateString('pt-BR') %> 
+                    <%= new Date(payment.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+
+          <div class="pagination">
+            <div class="pagination-info">
+              <%= total %> results
+            </div>
+            <div class="pagination-buttons">
+              <% if (page > 1) { %>
+                <a href="?page=<%= page - 1 %><% if (filters.status) { %>&status=<%= filters.status %><% } %><% if (filters.method) { %>&method=<%= filters.method %><% } %><% if (filters.dateFrom) { %>&dateFrom=<%= filters.dateFrom %><% } %><% if (filters.dateTo) { %>&dateTo=<%= filters.dateTo %><% } %>" class="pagination-btn">Previous</a>
+              <% } else { %>
+                <span class="pagination-btn disabled">Previous</span>
+              <% } %>
+              
+              <span class="pagination-btn active"><%= page %></span>
+              
+              <% if (page < totalPages) { %>
+                <a href="?page=<%= page + 1 %><% if (filters.status) { %>&status=<%= filters.status %><% } %><% if (filters.method) { %>&method=<%= filters.method %><% } %><% if (filters.dateFrom) { %>&dateFrom=<%= filters.dateFrom %><% } %><% if (filters.dateTo) { %>&dateTo=<%= filters.dateTo %><% } %>" class="pagination-btn">Next</a>
+              <% } else { %>
+                <span class="pagination-btn disabled">Next</span>
+              <% } %>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="empty-state">
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+            </svg>
+            <h3>Nenhum pagamento encontrado</h3>
+            <p>Não há pagamentos para exibir com os filtros aplicados.</p>
+          </div>
+        <% } %>
+      </div>
+    </main>
+  </div>
+</body>
+</html> 

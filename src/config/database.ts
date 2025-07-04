@@ -16,7 +16,7 @@ export const connectDatabase = async (): Promise<void> => {
     });
   } catch (error) {
     logger.error('Error connecting to MongoDB:', error);
-    process.exit(1);
+    throw error; // Deixa o app.ts lidar com o erro
   }
 };
 

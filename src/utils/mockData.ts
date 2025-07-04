@@ -269,4 +269,10 @@ export const mockScenarios = {
     amountCaptured: 51.75,
     amountRefunded: 25.00
   }
-}; 
+};
+
+// Array de pagamentos mock
+export const mockPayments = Array.from({ length: 10 }, () => generateMockPaymentRequest());
+
+// Array de pedidos mock (usando orderDetails dos pagamentos)
+export const mockOrders = mockPayments.map(p => p.orderDetails); 

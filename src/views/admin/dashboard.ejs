@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Paygator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f8fafc;
+      color: #334155;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background: #1e293b;
+      color: white;
+      padding: 2rem 0;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo {
+      padding: 0 2rem 2rem;
+      border-bottom: 1px solid #334155;
+      margin-bottom: 2rem;
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #3b82f6;
+    }
+
+    .nav-menu {
+      list-style: none;
+    }
+
+    .nav-item {
+      margin-bottom: 0.5rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 2rem;
+      color: #cbd5e1;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      background: #334155;
+      color: white;
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 0.75rem;
+      fill: currentColor;
+    }
+
+    .main-content {
+      flex: 1;
+      margin-left: 250px;
+      padding: 2rem;
+    }
+
+    .header {
+      display: flex;
+      justify-content: between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logout-btn {
+      padding: 0.5rem 1rem;
+      background: #ef4444;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .logout-btn:hover {
+      background: #dc2626;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .stat-title {
+      font-size: 0.875rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .stat-icon {
+      width: 24px;
+      height: 24px;
+      padding: 0.5rem;
+      border-radius: 6px;
+    }
+
+    .stat-icon.blue {
+      background: #dbeafe;
+      color: #3b82f6;
+    }
+
+    .stat-icon.green {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+
+    .stat-icon.yellow {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .stat-icon.red {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .stat-change {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .action-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+      text-align: center;
+    }
+
+    .action-link {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .action-link:hover {
+      color: #2563eb;
+    }
+
+    .action-description {
+      color: #64748b;
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        position: relative;
+        height: auto;
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-text">Paygator</div>
+      </div>
+      <nav>
+        <ul class="nav-menu">
+          <li class="nav-item">
+            <a href="/admin/" class="nav-link active">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+              </svg>
+              Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/payments" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+              </svg>
+              Pagamentos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/orders" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+              Pedidos
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="header">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="user-menu">
+          <a href="/admin/logout" class="logout-btn">Sair</a>
+        </div>
+      </header>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Total de Pagamentos</span>
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value"><%= stats.totalPayments %></div>
+          <div class="stat-change">Total histórico</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Valor Total</span>
+            <div class="stat-icon green">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value">R$ <%= (stats.totalAmount / 100).toLocaleString('pt-BR') %></div>
+          <div class="stat-change">Receita total</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Pagamentos Aprovados</span>
+            <div class="stat-icon green">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value"><%= stats.successfulPayments %></div>
+          <div class="stat-change">Aprovados com sucesso</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Pagamentos Pendentes</span>
+            <div class="stat-icon yellow">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V19H11V17M11,5H13V15H11V5Z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value"><%= stats.pendingPayments %></div>
+          <div class="stat-change">Aguardando processamento</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Pagamentos Falhou</span>
+            <div class="stat-icon red">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value"><%= stats.failedPayments %></div>
+          <div class="stat-change">Falharam no processamento</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Hoje</span>
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value"><%= stats.todayPayments %></div>
+          <div class="stat-change">R$ <%= (stats.todayAmount / 100).toLocaleString('pt-BR') %> hoje</div>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <div class="action-card">
+          <a href="/admin/payments" class="action-link">Ver Todos os Pagamentos</a>
+          <p class="action-description">Visualizar histórico completo de pagamentos</p>
+        </div>
+        <div class="action-card">
+          <a href="/admin/orders" class="action-link">Ver Pedidos</a>
+          <p class="action-description">Gerenciar pedidos e status</p>
+        </div>
+        <div class="action-card">
+          <a href="/admin/payments?status=pending" class="action-link">Pagamentos Pendentes</a>
+          <p class="action-description">Revisar pagamentos aguardando</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html> 

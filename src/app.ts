@@ -13,6 +13,10 @@ import webhookRoutes from './routes/webhookRoutes';
 import playfoodRoutes from './routes/playfoodRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import playfoodPaymentRoutes from './routes/playfoodPaymentRoutes';
+import path from 'path';
+import session from 'express-session';
+import bodyParser from 'body-parser';
+import adminRoutes from './routes/adminRoutes';
 
 // Configuração do Swagger
 const swaggerOptions = {
@@ -92,6 +96,22 @@ class App {
 
     // Rate limiting global
     this.app.use(apiRateLimiter);
+
+    // Configurar EJS
+    this.app.set('view engine', 'ejs');
+    this.app.set('views', path.join(process.cwd(), 'src', 'views'));
+
+    // Body parser para forms
+    this.app.use(bodyParser.urlencoded({ extended: true }));
+    this.app.use(bodyParser.json());
+
+    // Sessões para autenticação admin
+    this.app.use(session({
+      secret: process.env['SESSION_SECRET'] || 'paygator-secret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: false } // true se usar HTTPS
+    }));
   }
 
   private initializeRoutes(): void {
@@ -127,6 +147,9 @@ class App {
     // API routes - PlayFood Payment Provider (API completa)
     this.app.use(`/api/${config.server.apiVersion}`, playfoodPaymentRoutes);
 
+    // Rotas admin
+    this.app.use('/admin', adminRoutes);
+
     // 404 handler
     this.app.use('*', (req, res) => {
       res.status(404).json({
@@ -147,7 +170,12 @@ class App {
   public async start(): Promise<void> {
     try {
       // Conectar ao MongoDB
-      // await connectDatabase();
+      try {
+        await connectDatabase();
+        logger.info('MongoDB connected successfully');
+      } catch (error) {
+        logger.warn('MongoDB connection failed, continuing without database', { error: error instanceof Error ? error.message : 'Unknown error' });
+      }
 
       // Iniciar servidor
       this.app.listen(config.server.port, () => {

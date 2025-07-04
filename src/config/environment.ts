@@ -14,7 +14,7 @@ export const config = {
     jwtSecret: process.env['JWT_SECRET'] || 'default-jwt-secret',
   },
   database: {
-    uri: process.env['MONGODB_URI'] || 'mongodb://localhost:27017/paygator',
+    uri: process.env['MONGODB_URI'] || 'mongodb+srv://inaciosacataria:d0nt2025D0drugs@cluster.mongodb.net/paygator?retryWrites=true&w=majority',
     dbName: process.env['MONGODB_DB_NAME'] || 'paygator',
   },
   redis: {
