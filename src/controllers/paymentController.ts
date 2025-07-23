@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { CreatePaymentRequest, CreatePaymentResponse } from '../types/payment';
-import { logger } from '../utils/logger';
-import { AuthenticatedRequest } from '../middleware/logging';
+import { logger } from '../utils/logger.js';
+import { loggingService } from '../services/loggingService.js';
+import { AuthenticatedRequest } from '../middleware/logging.js';
 import { supabaseService } from '../config/database.js';
 
 export class PaymentController {
@@ -125,6 +126,18 @@ export class PaymentController {
         logger.warn('Failed to save payment to database, but continuing with response', {
           correlationId: req.correlationId,
           error: dbResult.error
+        });
+      } else {
+        // Log do pagamento criado
+        await loggingService.logPayment({
+          paymentId: paymentDataWithDefaults.paymentId,
+          externalPaymentId: externalPaymentId,
+          action: 'created',
+          newStatus: 'pending',
+          amount: paymentDataWithDefaults.amount,
+          currency: paymentDataWithDefaults.currency,
+          customerEmail: paymentDataWithDefaults.customer.email,
+          correlationId: req.correlationId || 'unknown'
         });
       }
 

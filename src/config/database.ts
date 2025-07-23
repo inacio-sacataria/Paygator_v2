@@ -1,4 +1,4 @@
-import { supabaseService, initializeSupabase } from './supabase.js';
+import { supabaseService, initializeSupabase } from './supabase';
 import { logger } from '../utils/logger.js';
 
 let isConnected = false;

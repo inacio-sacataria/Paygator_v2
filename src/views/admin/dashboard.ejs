@@ -263,6 +263,14 @@
               Pedidos
             </a>
           </li>
+          <li class="nav-item">
+            <a href="/admin/logs" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+              </svg>
+              Logs
+            </a>
+          </li>
         </ul>
       </nav>
     </aside>
@@ -298,7 +306,7 @@
               </svg>
             </div>
           </div>
-          <div class="stat-value">R$ <%= (stats.totalAmount / 100).toLocaleString('pt-BR') %></div>
+                          <div class="stat-value">MT <%= (stats.totalAmount / 100).toLocaleString('pt-BR') %></div>
           <div class="stat-change">Receita total</div>
         </div>
 
@@ -351,7 +359,7 @@
             </div>
           </div>
           <div class="stat-value"><%= stats.todayPayments %></div>
-          <div class="stat-change">R$ <%= (stats.todayAmount / 100).toLocaleString('pt-BR') %> hoje</div>
+                          <div class="stat-change">MT <%= (stats.todayAmount / 100).toLocaleString('pt-BR') %> hoje</div>
         </div>
       </div>
 

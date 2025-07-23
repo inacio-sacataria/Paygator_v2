@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logs - Paygator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f8fafc;
+      color: #334155;
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 250px;
+      background: #1e293b;
+      color: white;
+      padding: 2rem 0;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo {
+      padding: 0 2rem 2rem;
+      border-bottom: 1px solid #334155;
+      margin-bottom: 2rem;
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #3b82f6;
+    }
+
+    .nav-menu {
+      list-style: none;
+    }
+
+    .nav-item {
+      margin-bottom: 0.5rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 2rem;
+      color: #cbd5e1;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      background: #334155;
+      color: white;
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 0.75rem;
+      fill: currentColor;
+    }
+
+    .main-content {
+      flex: 1;
+      margin-left: 250px;
+      padding: 2rem;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logout-btn {
+      padding: 0.5rem 1rem;
+      background: #ef4444;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .logout-btn:hover {
+      background: #dc2626;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .stat-title {
+      font-size: 0.875rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .stat-icon {
+      width: 24px;
+      height: 24px;
+      padding: 0.5rem;
+      border-radius: 6px;
+    }
+
+    .stat-icon.blue {
+      background: #dbeafe;
+      color: #3b82f6;
+    }
+
+    .stat-icon.green {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+
+    .stat-icon.yellow {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .stat-icon.red {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .stat-change {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+
+    .content-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+      margin-bottom: 2rem;
+    }
+
+    .card-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-secondary {
+      background: #64748b;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #475569;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: #3b82f6;
+      border: 1px solid #3b82f6;
+    }
+
+    .btn-outline:hover {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .tab {
+      padding: 1rem 1.5rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #64748b;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      color: #3b82f6;
+      border-bottom-color: #3b82f6;
+    }
+
+    .tab-content {
+      padding: 1.5rem;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+      background: #f8fafc;
+      border-radius: 6px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .log-entry {
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      background: #f8fafc;
+    }
+
+    .log-entry.error {
+      border-left: 4px solid #ef4444;
+      background: #fef2f2;
+    }
+
+    .log-entry.success {
+      border-left: 4px solid #10b981;
+      background: #f0fdf4;
+    }
+
+    .log-entry.warning {
+      border-left: 4px solid #f59e0b;
+      background: #fffbeb;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.5rem;
+    }
+
+    .log-title {
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .log-meta {
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+
+    .log-details {
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+      overflow-x: auto;
+    }
+
+    .badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+
+    .page-link {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      background: white;
+      color: #374151;
+      text-decoration: none;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .page-link:hover {
+      background: #f3f4f6;
+    }
+
+    .page-link.active {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+
+    .page-link.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #6b7280;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #6b7280;
+    }
+
+    .empty-state-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1rem;
+      opacity: 0.5;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        position: relative;
+        height: auto;
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filters {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-text">Paygator</div>
+      </div>
+      <nav>
+        <ul class="nav-menu">
+          <li class="nav-item">
+            <a href="/admin/" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+              </svg>
+              Dashboard
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/payments" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+              </svg>
+              Pagamentos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/orders" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+              Pedidos
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/admin/logs" class="nav-link active">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+              </svg>
+              Logs
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <header class="header">
+        <h1 class="page-title">Logs do Sistema</h1>
+        <div class="user-menu">
+          <a href="/admin/logout" class="logout-btn">Sair</a>
+        </div>
+      </header>
+
+      <!-- Estatísticas -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Logs de API</span>
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value" id="totalApiLogs">0</div>
+          <div class="stat-change">Total histórico</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Logs de Pagamentos</span>
+            <div class="stat-icon green">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value" id="totalPaymentLogs">0</div>
+          <div class="stat-change">Total histórico</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Erros</span>
+            <div class="stat-icon red">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value" id="errorCount">0</div>
+          <div class="stat-change">Total de erros</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Logs Hoje</span>
+            <div class="stat-icon yellow">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value" id="todayLogs">0</div>
+          <div class="stat-change">Logs de hoje</div>
+        </div>
+      </div>
+
+      <!-- Conteúdo Principal -->
+      <div class="content-card">
+        <div class="card-header">
+          <h2 class="card-title">Visualização de Logs</h2>
+          <div class="card-actions">
+            <button class="btn btn-outline" onclick="refreshLogs()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+              </svg>
+              Atualizar
+            </button>
+            <button class="btn btn-secondary" onclick="exportLogs()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+              </svg>
+              Exportar
+            </button>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('api-logs')">Logs de API</button>
+          <button class="tab" onclick="switchTab('payment-logs')">Logs de Pagamentos</button>
+        </div>
+
+        <!-- Logs de API -->
+        <div id="api-logs" class="tab-content" style="display: block;">
+            <div class="filters">
+              <div class="form-group">
+                <label class="form-label">Método</label>
+                <select class="form-control" id="methodFilter">
+                  <option value="">Todos</option>
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="DELETE">DELETE</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="form-control" id="statusFilter">
+                  <option value="">Todos</option>
+                  <option value="200">200 - OK</option>
+                  <option value="400">400 - Bad Request</option>
+                  <option value="401">401 - Unauthorized</option>
+                  <option value="500">500 - Server Error</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="dateFromFilter">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="dateToFilter">
+              </div>
+              <div class="form-group">
+                <label class="form-label">&nbsp;</label>
+                <button class="btn btn-primary" onclick="filterApiLogs()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                  </svg>
+                  Filtrar
+                </button>
+              </div>
+            </div>
+
+            <div id="apiLogsContainer">
+              <div class="loading">Carregando logs...</div>
+            </div>
+
+            <div class="pagination" id="apiLogsPagination"></div>
+          </div>
+        </div>
+
+        <!-- Logs de Pagamentos -->
+        <div id="payment-logs" class="tab-content" style="display: none;">
+            <div class="filters">
+              <div class="form-group">
+                <label class="form-label">Ação</label>
+                <select class="form-control" id="actionFilter">
+                  <option value="">Todas</option>
+                  <option value="created">Criado</option>
+                  <option value="updated">Atualizado</option>
+                  <option value="status_changed">Status Alterado</option>
+                  <option value="failed">Falhou</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Payment ID</label>
+                <input type="text" class="form-control" id="paymentIdFilter" placeholder="Filtrar por Payment ID">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="paymentDateFromFilter">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="paymentDateToFilter">
+              </div>
+              <div class="form-group">
+                <label class="form-label">&nbsp;</label>
+                <button class="btn btn-primary" onclick="filterPaymentLogs()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                  </svg>
+                  Filtrar
+                </button>
+              </div>
+            </div>
+
+            <div id="paymentLogsContainer">
+              <div class="loading">Carregando logs...</div>
+            </div>
+
+            <div class="pagination" id="paymentLogsPagination"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let currentApiPage = 1;
+    let currentPaymentPage = 1;
+    let currentTab = 'api-logs';
+
+    // Função para alternar entre abas
+    function switchTab(tabName) {
+      console.log('Alternando para aba:', tabName);
+      
+      // Atualizar abas
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+      
+      // Ativar aba selecionada
+      event.target.classList.add('active');
+      document.getElementById(tabName).style.display = 'block';
+      
+      currentTab = tabName;
+      
+      // Carregar dados da aba
+      if (tabName === 'api-logs') {
+        loadApiLogs(1);
+      } else {
+        loadPaymentLogs(1);
+      }
+    }
+
+    // Carregar estatísticas de logs
+    async function loadLogStats() {
+      try {
+        console.log('Carregando estatísticas de logs...');
+        const response = await fetch('/admin/api/log-stats');
+        const data = await response.json();
+        console.log('Resposta das estatísticas:', data);
+        
+        if (data.success) {
+          document.getElementById('totalApiLogs').textContent = data.data.totalApiLogs;
+          document.getElementById('totalPaymentLogs').textContent = data.data.totalPaymentLogs;
+          document.getElementById('errorCount').textContent = data.data.errorCount;
+          document.getElementById('todayLogs').textContent = data.data.todayApiLogs + data.data.todayPaymentLogs;
+        }
+      } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+      }
+    }
+
+    // Carregar logs de API
+    async function loadApiLogs(page = 1) {
+      try {
+        console.log('Carregando logs de API, página:', page);
+        const method = document.getElementById('methodFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const dateFrom = document.getElementById('dateFromFilter').value;
+        const dateTo = document.getElementById('dateToFilter').value;
+
+        let url = `/admin/api/logs?page=${page}`;
+        if (method) url += `&method=${method}`;
+        if (status) url += `&status=${status}`;
+        if (dateFrom) url += `&dateFrom=${dateFrom}`;
+        if (dateTo) url += `&dateTo=${dateTo}`;
+
+        console.log('URL da requisição:', url);
+        const response = await fetch(url);
+        const data = await response.json();
+        console.log('Resposta dos logs de API:', data);
+        
+        if (data.success) {
+          displayApiLogs(data.data);
+          generatePagination(data.data, 'apiLogsPagination', page, loadApiLogs);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar logs de API:', error);
+        document.getElementById('apiLogsContainer').innerHTML = '<div class="empty-state">Erro ao carregar logs</div>';
+      }
+    }
+
+    // Carregar logs de pagamentos
+    async function loadPaymentLogs(page = 1) {
+      try {
+        const action = document.getElementById('actionFilter').value;
+        const paymentId = document.getElementById('paymentIdFilter').value;
+        const dateFrom = document.getElementById('paymentDateFromFilter').value;
+        const dateTo = document.getElementById('paymentDateToFilter').value;
+
+        let url = `/admin/api/payment-logs?page=${page}`;
+        if (action) url += `&action=${action}`;
+        if (paymentId) url += `&paymentId=${paymentId}`;
+        if (dateFrom) url += `&dateFrom=${dateFrom}`;
+        if (dateTo) url += `&dateTo=${dateTo}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success) {
+          displayPaymentLogs(data.data);
+          generatePagination(data.data, 'paymentLogsPagination', page, loadPaymentLogs);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar logs de pagamentos:', error);
+        document.getElementById('paymentLogsContainer').innerHTML = '<div class="empty-state">Erro ao carregar logs</div>';
+      }
+    }
+
+            // Exibir logs de API
+        function displayApiLogs(data) {
+          console.log('Exibindo logs de API:', data);
+          const container = document.getElementById('apiLogsContainer');
+          
+          if (!data || !data.logs || data.logs.length === 0) {
+            console.log('Nenhum log encontrado');
+            container.innerHTML = `
+              <div class="empty-state">
+                <svg class="empty-state-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                </svg>
+                <h3>Nenhum log encontrado</h3>
+                <p>Tente ajustar os filtros ou verificar se há logs disponíveis.</p>
+              </div>
+            `;
+            return;
+          }
+
+      const logsHtml = data.logs.map(log => {
+        const statusClass = log.response_status >= 400 ? 'error' : 
+                          log.response_status >= 300 ? 'warning' : 'success';
+        
+        const statusBadge = log.response_status >= 400 ? 'badge-error' : 
+                           log.response_status >= 300 ? 'badge-warning' : 'badge-success';
+        
+        return `
+          <div class="log-entry ${statusClass}">
+            <div class="log-header">
+              <div>
+                <div class="log-title">
+                  ${log.method} ${log.url}
+                  <span class="badge ${statusBadge}">${log.response_status}</span>
+                  <span class="badge badge-info">${log.response_time_ms}ms</span>
+                </div>
+                <div class="log-meta">
+                  IP: ${log.ip_address || 'N/A'} | 
+                  Correlation ID: ${log.correlation_id} |
+                  ${new Date(log.created_at).toLocaleString('pt-BR')}
+                </div>
+              </div>
+            </div>
+            ${log.error_message ? `
+              <div class="log-details">
+                <strong>Erro:</strong> ${log.error_message}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = logsHtml;
+    }
+
+    // Exibir logs de pagamentos
+    function displayPaymentLogs(data) {
+      const container = document.getElementById('paymentLogsContainer');
+      
+      if (data.logs.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg class="empty-state-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+            </svg>
+            <h3>Nenhum log encontrado</h3>
+            <p>Tente ajustar os filtros ou verificar se há logs disponíveis.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const logsHtml = data.logs.map(log => {
+        const actionClass = log.action === 'failed' ? 'error' : 
+                          log.action === 'status_changed' ? 'warning' : 'success';
+        
+        const actionBadge = log.action === 'failed' ? 'badge-error' : 
+                           log.action === 'status_changed' ? 'badge-warning' : 'badge-success';
+        
+        return `
+          <div class="log-entry ${actionClass}">
+            <div class="log-header">
+              <div>
+                <div class="log-title">
+                  ${log.payment_id}
+                  <span class="badge ${actionBadge}">${log.action}</span>
+                  ${log.amount ? `<span class="badge badge-info">MT ${(log.amount/100).toFixed(2)}</span>` : ''}
+                </div>
+                <div class="log-meta">
+                  Cliente: ${log.customer_email || 'N/A'} | 
+                  Status: ${log.previous_status || 'N/A'} → ${log.new_status || 'N/A'} |
+                  ${new Date(log.created_at).toLocaleString('pt-BR')}
+                </div>
+              </div>
+            </div>
+            ${log.error_message ? `
+              <div class="log-details">
+                <strong>Erro:</strong> ${log.error_message}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = logsHtml;
+    }
+
+    // Gerar paginação
+    function generatePagination(data, containerId, currentPage, loadFunction) {
+      const container = document.getElementById(containerId);
+      const totalPages = data.totalPages;
+      
+      if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let paginationHtml = '';
+      
+      // Botão anterior
+      paginationHtml += `
+        <a href="#" class="page-link ${currentPage === 1 ? 'disabled' : ''}" 
+           onclick="event.preventDefault(); ${loadFunction.name}(${currentPage - 1})">
+          Anterior
+        </a>
+      `;
+
+      // Páginas
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+          paginationHtml += `
+            <a href="#" class="page-link ${i === currentPage ? 'active' : ''}" 
+               onclick="event.preventDefault(); ${loadFunction.name}(${i})">
+              ${i}
+            </a>
+          `;
+        } else if (i === currentPage - 3 || i === currentPage + 3) {
+          paginationHtml += '<span class="page-link disabled">...</span>';
+        }
+      }
+
+      // Botão próximo
+      paginationHtml += `
+        <a href="#" class="page-link ${currentPage === totalPages ? 'disabled' : ''}" 
+           onclick="event.preventDefault(); ${loadFunction.name}(${currentPage + 1})">
+          Próximo
+        </a>
+      `;
+
+      container.innerHTML = paginationHtml;
+    }
+
+    // Funções de filtro
+    function filterApiLogs() {
+      currentApiPage = 1;
+      loadApiLogs(1);
+    }
+
+    function filterPaymentLogs() {
+      currentPaymentPage = 1;
+      loadPaymentLogs(1);
+    }
+
+    // Funções de utilidade
+    function refreshLogs() {
+      loadLogStats();
+      if (currentTab === 'api-logs') {
+        loadApiLogs(currentApiPage);
+      } else {
+        loadPaymentLogs(currentPaymentPage);
+      }
+    }
+
+    function exportLogs() {
+      alert('Funcionalidade de exportação será implementada em breve!');
+    }
+
+    // Carregar dados iniciais
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM carregado, iniciando carregamento de dados...');
+      
+      // Teste simples para verificar se a API está funcionando
+      fetch('/admin/api/log-stats')
+        .then(response => response.json())
+        .then(data => {
+          console.log('Teste da API:', data);
+          if (data.success) {
+            document.getElementById('totalApiLogs').textContent = data.data.totalApiLogs;
+            document.getElementById('totalPaymentLogs').textContent = data.data.totalPaymentLogs;
+            document.getElementById('errorCount').textContent = data.data.errorCount;
+            document.getElementById('todayLogs').textContent = data.data.todayApiLogs + data.data.todayPaymentLogs;
+          }
+        })
+        .catch(error => {
+          console.error('Erro no teste da API:', error);
+        });
+      
+      loadLogStats();
+      loadApiLogs(1);
+    });
+
+    // Atualizar automaticamente a cada 30 segundos
+    setInterval(refreshLogs, 30000);
+  </script>
+</body>
+</html> 

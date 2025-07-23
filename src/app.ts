@@ -68,9 +68,10 @@ class App {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+          scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
           imgSrc: ["'self'", "data:", "https:"],
+          fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
         },
       },
     }));
@@ -135,6 +136,9 @@ class App {
     // Swagger documentation
     this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+    // Rotas admin (deve vir ANTES das rotas API com wildcard)
+    this.app.use('/admin', adminRoutes);
+
     // API routes - Webhooks genéricos
     this.app.use(`/api/${config.server.apiVersion}/webhooks`, webhookRoutes);
 
@@ -146,9 +150,6 @@ class App {
 
     // API routes - PlayFood Payment Provider (API completa)
     this.app.use(`/api/${config.server.apiVersion}`, playfoodPaymentRoutes);
-
-    // Rotas admin
-    this.app.use('/admin', adminRoutes);
 
     // 404 handler
     this.app.use('*', (req, res) => {

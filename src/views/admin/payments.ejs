@@ -448,18 +448,21 @@
           <table class="table">
             <thead>
               <tr>
-                <th>Payment ID</th>
+                <th>Payment ID / Order</th>
                 <th>Status</th>
-                <th>Amount</th>
+                <th>Amount / Currency</th>
                 <th>Method</th>
-                <th>Creation Date</th>
+                <th>Customer Info</th>
+                <th>Vendor Info</th>
+                <th>Date</th>
               </tr>
             </thead>
             <tbody>
               <% payments.forEach(payment => { %>
                 <tr>
                   <td>
-                    <div class="payment-id"><%= payment.order_id || payment._id %></div>
+                    <div class="payment-id"><%= payment.payment_id %></div>
+                    <div style="font-size: 0.75rem; color: #64748b;">Order: <%= payment.order_id %></div>
                   </td>
                   <td>
                     <span class="status-badge status-<%= payment.status %>">
@@ -467,7 +470,8 @@
                     </span>
                   </td>
                   <td>
-                    <div class="amount">R$ <%= (payment.amount / 100).toLocaleString('pt-BR') %></div>
+                                            <div class="amount">MT <%= payment.amount.toLocaleString('pt-BR') %></div>
+                    <div style="font-size: 0.75rem; color: #64748b;"><%= payment.currency %></div>
                   </td>
                   <td>
                     <div class="payment-method">
@@ -486,8 +490,26 @@
                     </div>
                   </td>
                   <td>
-                    <%= new Date(payment.created_at).toLocaleDateString('pt-BR') %> 
-                    <%= new Date(payment.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) %>
+                    <div style="font-weight: 600; color: #1e293b;"><%= payment.customer_name || 'N/A' %></div>
+                    <div style="font-size: 0.75rem; color: #64748b;"><%= payment.customer_email || 'N/A' %></div>
+                    <div style="font-size: 0.75rem; color: #64748b;"><%= payment.customer_phone || 'N/A' %></div>
+                    <% if (payment.customer_city) { %>
+                      <div style="font-size: 0.75rem; color: #64748b;"><%= payment.customer_city %>, <%= payment.customer_country || 'N/A' %></div>
+                    <% } %>
+                  </td>
+                  <td>
+                    <div style="font-weight: 600; color: #1e293b;"><%= payment.vendor_name || 'N/A' %></div>
+                    <div style="font-size: 0.75rem; color: #64748b;"><%= payment.vendor_email || 'N/A' %></div>
+                    <div style="font-size: 0.75rem; color: #64748b;"><%= payment.vendor_phone || 'N/A' %></div>
+                    <% if (payment.vendor_city) { %>
+                      <div style="font-size: 0.75rem; color: #64748b;"><%= payment.vendor_city %>, <%= payment.vendor_country || 'N/A' %></div>
+                    <% } %>
+                  </td>
+                  <td>
+                    <div><%= new Date(payment.created_at).toLocaleDateString('pt-BR') %></div>
+                    <div style="font-size: 0.75rem; color: #64748b;">
+                      <%= new Date(payment.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) %>
+                    </div>
                   </td>
                 </tr>
               <% }); %>

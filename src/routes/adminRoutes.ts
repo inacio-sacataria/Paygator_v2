@@ -1,7 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import path from 'path';
-import { PlayfoodOrder } from '../models/PlayfoodOrder';
-import { PlayfoodPayment } from '../models/PlayfoodPayment';
 import { adminService } from '../services/adminService';
 import '../types/session';
 
@@ -41,6 +39,155 @@ router.get('/logout', (req, res) => {
     req.session.admin = false;
   }
   res.redirect('/admin/login');
+});
+
+// API endpoint for dashboard stats
+router.get('/api/stats', async (req, res) => {
+  try {
+    const stats = await adminService.getDashboardStats();
+    res.json({
+      success: true,
+      data: stats,
+      message: 'Dashboard stats retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error loading dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: 'Failed to load dashboard stats'
+    });
+  }
+});
+
+// API endpoint for payments list
+router.get('/api/payments', async (req, res) => {
+  try {
+    const page = parseInt(req.query['page'] as string) || 1;
+    const status = req.query['status'] as string;
+    const method = req.query['method'] as string;
+    const dateFromStr = req.query['dateFrom'] as string;
+    const dateToStr = req.query['dateTo'] as string;
+
+    const filter: any = {
+      page,
+      limit: 10
+    };
+
+    if (status) filter.status = status;
+    if (method) filter.method = method;
+    if (dateFromStr) filter.dateFrom = new Date(dateFromStr);
+    if (dateToStr) filter.dateTo = new Date(dateToStr);
+
+    const result = await adminService.getPayments(filter);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Payments retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error loading payments:', error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: 'Failed to load payments'
+    });
+  }
+});
+
+// API endpoint for API logs
+router.get('/api/logs', async (req, res) => {
+  try {
+    const page = parseInt(req.query['page'] as string) || 1;
+    const method = req.query['method'] as string;
+    const url = req.query['url'] as string;
+    const status = parseInt(req.query['status'] as string);
+    const dateFromStr = req.query['dateFrom'] as string;
+    const dateToStr = req.query['dateTo'] as string;
+
+    const filter: any = {
+      page,
+      limit: 50
+    };
+
+    if (method) filter.method = method;
+    if (url) filter.url = url;
+    if (status) filter.status = status;
+    if (dateFromStr) filter.dateFrom = new Date(dateFromStr);
+    if (dateToStr) filter.dateTo = new Date(dateToStr);
+
+    const result = await adminService.getApiLogs(filter);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'API logs retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error loading API logs:', error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: 'Failed to load API logs'
+    });
+  }
+});
+
+// API endpoint for payment logs
+router.get('/api/payment-logs', async (req, res) => {
+  try {
+    const page = parseInt(req.query['page'] as string) || 1;
+    const paymentId = req.query['paymentId'] as string;
+    const action = req.query['action'] as string;
+    const dateFromStr = req.query['dateFrom'] as string;
+    const dateToStr = req.query['dateTo'] as string;
+
+    const filter: any = {
+      page,
+      limit: 50
+    };
+
+    if (paymentId) filter.paymentId = paymentId;
+    if (action) filter.action = action;
+    if (dateFromStr) filter.dateFrom = new Date(dateFromStr);
+    if (dateToStr) filter.dateTo = new Date(dateToStr);
+
+    const result = await adminService.getPaymentLogs(filter);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Payment logs retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error loading payment logs:', error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: 'Failed to load payment logs'
+    });
+  }
+});
+
+// API endpoint for log statistics
+router.get('/api/log-stats', async (req, res) => {
+  try {
+    const stats = await adminService.getLogStats();
+
+    res.json({
+      success: true,
+      data: stats,
+      message: 'Log statistics retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error loading log stats:', error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      message: 'Failed to load log statistics'
+    });
+  }
 });
 
 // Dashboard
@@ -118,6 +265,16 @@ router.get('/orders', requireAuth, async (req, res) => {
       page: 1,
       totalPages: 1
     });
+  }
+});
+
+// Logs page
+router.get('/logs', requireAuth, async (req, res) => {
+  try {
+    res.render('admin/logs');
+  } catch (error) {
+    console.error('Error loading logs page:', error);
+    res.render('admin/logs');
   }
 });
 

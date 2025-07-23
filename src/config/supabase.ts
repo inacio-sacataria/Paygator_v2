@@ -199,13 +199,20 @@ let isConnected = false;
 export async function initializeSupabase() {
   if (!isConnected) {
     try {
+      logger.info('Connecting to PostgreSQL...');
       await pgClient.connect();
       isConnected = true;
-      logger.info('PostgreSQL connection established');
+      logger.info('PostgreSQL connection established successfully');
+      
+      // Test the connection
+      const testResult = await pgClient.query('SELECT NOW() as current_time');
+      logger.info('PostgreSQL test query successful:', { currentTime: testResult.rows[0].current_time });
     } catch (error) {
       logger.error('Failed to connect to PostgreSQL', { error: error instanceof Error ? error.message : 'Unknown error' });
       throw error;
     }
+  } else {
+    logger.info('PostgreSQL already connected');
   }
 }
 

@@ -1,5 +1,6 @@
-import { PlayfoodPayment, IPlayfoodPayment } from '../models/PlayfoodPayment';
-import { PlayfoodOrder } from '../models/PlayfoodOrder';
+import { supabaseService } from '../config/database.js';
+import { loggingService } from './loggingService.js';
+import { logger } from '../utils/logger.js';
 
 export interface DashboardStats {
   totalPayments: number;
@@ -20,47 +21,83 @@ export interface PaymentFilter {
   limit?: number;
 }
 
+export interface Payment {
+  id: number;
+  payment_id: string;
+  external_payment_id: string;
+  amount: number;
+  currency: string;
+  payment_method: string;
+  customer_email: string;
+  customer_name: string;
+  customer_phone: string;
+  status: string;
+  order_id: string;
+  return_url: string;
+  iframe_link: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Order {
+  id: number;
+  order_id: string;
+  external_order_id: string;
+  customer_id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  total_amount: number;
+  currency: string;
+  status: string;
+  items: any;
+  created_at: string;
+  updated_at: string;
+}
+
 export class AdminService {
   
   async getDashboardStats(): Promise<DashboardStats> {
     try {
+      logger.info('Getting dashboard stats from Supabase...');
+      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const todayISO = today.toISOString();
       
+      // Buscar estatísticas do Supabase
       const [
-        totalPayments,
+        totalPaymentsResult,
         totalAmountResult,
-        successfulPayments,
-        pendingPayments,
-        failedPayments,
-        todayPayments,
+        successfulPaymentsResult,
+        pendingPaymentsResult,
+        failedPaymentsResult,
+        todayPaymentsResult,
         todayAmountResult
       ] = await Promise.all([
-        PlayfoodPayment.countDocuments(),
-        PlayfoodPayment.aggregate([
-          { $group: { _id: null, total: { $sum: '$amount' } } }
-        ]),
-        PlayfoodPayment.countDocuments({ status: 'approved' }),
-        PlayfoodPayment.countDocuments({ status: 'pending' }),
-        PlayfoodPayment.countDocuments({ status: 'failed' }),
-        PlayfoodPayment.countDocuments({ created_at: { $gte: today } }),
-        PlayfoodPayment.aggregate([
-          { $match: { created_at: { $gte: today } } },
-          { $group: { _id: null, total: { $sum: '$amount' } } }
-        ])
+        supabaseService.getPaymentsCount(),
+        this.getTotalAmount(),
+        this.getPaymentsByStatus('approved'),
+        this.getPaymentsByStatus('pending'),
+        this.getPaymentsByStatus('failed'),
+        this.getPaymentsByDate(todayISO),
+        this.getAmountByDate(todayISO)
       ]);
 
-      return {
-        totalPayments,
-        totalAmount: totalAmountResult[0]?.total || 0,
-        successfulPayments,
-        pendingPayments,
-        failedPayments,
-        todayPayments,
-        todayAmount: todayAmountResult[0]?.total || 0
+      const stats = {
+        totalPayments: totalPaymentsResult.count || 0,
+        totalAmount: totalAmountResult.amount || 0,
+        successfulPayments: successfulPaymentsResult.count || 0,
+        pendingPayments: pendingPaymentsResult.count || 0,
+        failedPayments: failedPaymentsResult.count || 0,
+        todayPayments: todayPaymentsResult.count || 0,
+        todayAmount: todayAmountResult.amount || 0
       };
+
+      logger.info('Dashboard stats retrieved successfully:', stats);
+      return stats;
     } catch (error) {
-      console.error('Error getting dashboard stats, using demo data:', error);
+      logger.error('Error getting dashboard stats, using demo data:', { error });
       // Retornar dados de demonstração quando não há conexão com o banco
       return {
         totalPayments: 3,
@@ -75,7 +112,7 @@ export class AdminService {
   }
 
   async getPayments(filter: PaymentFilter = {}): Promise<{
-    payments: IPlayfoodPayment[];
+    payments: Payment[];
     total: number;
     page: number;
     totalPages: number;
@@ -83,82 +120,120 @@ export class AdminService {
     try {
       const page = filter.page || 1;
       const limit = filter.limit || 10;
-      const skip = (page - 1) * limit;
+      const offset = (page - 1) * limit;
 
-      // Build query
-      const query: any = {};
-      
+      // Construir query SQL
+      let whereClause = 'WHERE 1=1';
+      const params: any[] = [];
+      let paramIndex = 1;
+
       if (filter.status) {
-        query.status = filter.status;
+        whereClause += ` AND status = $${paramIndex++}`;
+        params.push(filter.status);
       }
       
       if (filter.method) {
-        query.payment_method = filter.method;
+        whereClause += ` AND payment_method = $${paramIndex++}`;
+        params.push(filter.method);
       }
       
-      if (filter.dateFrom || filter.dateTo) {
-        query.created_at = {};
-        if (filter.dateFrom) {
-          query.created_at.$gte = filter.dateFrom;
-        }
-        if (filter.dateTo) {
-          query.created_at.$lte = filter.dateTo;
-        }
+      if (filter.dateFrom) {
+        whereClause += ` AND created_at >= $${paramIndex++}`;
+        params.push(filter.dateFrom.toISOString());
+      }
+      
+      if (filter.dateTo) {
+        whereClause += ` AND created_at <= $${paramIndex++}`;
+        params.push(filter.dateTo.toISOString());
       }
 
-      const [payments, total] = await Promise.all([
-        PlayfoodPayment.find(query)
-          .sort({ created_at: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        PlayfoodPayment.countDocuments(query)
+      // Query para buscar pagamentos
+      const query = `
+        SELECT * FROM payments 
+        ${whereClause}
+        ORDER BY created_at DESC 
+        LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+      `;
+      params.push(limit, offset);
+
+      // Query para contar total
+      const countQuery = `
+        SELECT COUNT(*) as total FROM payments 
+        ${whereClause}
+      `;
+
+      const { pgClient } = await import('../config/supabase');
+      
+      const [paymentsResult, countResult] = await Promise.all([
+        pgClient.query(query, params),
+        pgClient.query(countQuery, params.slice(0, -2)) // Remove limit e offset
       ]);
 
+      const total = parseInt(countResult.rows[0].total);
+      const payments = paymentsResult.rows;
+
       return {
-        payments: payments as IPlayfoodPayment[],
+        payments,
         total,
         page,
         totalPages: Math.ceil(total / limit)
       };
     } catch (error) {
-      console.error('Error getting payments, using demo data:', error);
+      logger.error('Error getting payments, using demo data:', { error });
       // Retornar dados de demonstração quando não há conexão com o banco
-      const demoPayments = [
+      const demoPayments: Payment[] = [
         {
-          _id: 'demo_001',
-          order_id: 'ORD-20241201-001',
+          id: 1,
+          payment_id: 'pay_demo_001',
+          external_payment_id: 'ext_demo_001',
           amount: 5175,
           currency: 'BRL',
           payment_method: 'credit_card',
+          customer_email: 'demo@example.com',
+          customer_name: 'Demo Customer',
+          customer_phone: '+5511999999999',
           status: 'approved',
-          gateway: 'paygator',
-          created_at: new Date(),
-          updated_at: new Date()
+          order_id: 'ORD-20241201-001',
+          return_url: 'https://example.com/success',
+          iframe_link: 'https://payment-gateway.com/pay/ext_demo_001',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
         {
-          _id: 'demo_002', 
-          order_id: 'ORD-20241201-002',
+          id: 2,
+          payment_id: 'pay_demo_002',
+          external_payment_id: 'ext_demo_002',
           amount: 3250,
           currency: 'BRL',
           payment_method: 'pix',
+          customer_email: 'demo2@example.com',
+          customer_name: 'Demo Customer 2',
+          customer_phone: '+5511888888888',
           status: 'approved',
-          gateway: 'paygator',
-          created_at: new Date(),
-          updated_at: new Date()
+          order_id: 'ORD-20241201-002',
+          return_url: 'https://example.com/success',
+          iframe_link: 'https://payment-gateway.com/pay/ext_demo_002',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
         {
-          _id: 'demo_003',
-          order_id: 'ORD-20241201-003',
+          id: 3,
+          payment_id: 'pay_demo_003',
+          external_payment_id: 'ext_demo_003',
           amount: 8900,
           currency: 'BRL',
           payment_method: 'debit_card',
+          customer_email: 'demo3@example.com',
+          customer_name: 'Demo Customer 3',
+          customer_phone: '+5511777777777',
           status: 'pending',
-          gateway: 'paygator',
-          created_at: new Date(),
-          updated_at: new Date()
+          order_id: 'ORD-20241201-003',
+          return_url: 'https://example.com/success',
+          iframe_link: 'https://payment-gateway.com/pay/ext_demo_003',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
-      ] as IPlayfoodPayment[];
+      ];
 
       return {
         payments: demoPayments,
@@ -171,16 +246,21 @@ export class AdminService {
 
   async getOrders(page: number = 1, limit: number = 10) {
     try {
-      const skip = (page - 1) * limit;
+      const offset = (page - 1) * limit;
       
-      const [orders, total] = await Promise.all([
-        PlayfoodOrder.find()
-          .sort({ created_at: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        PlayfoodOrder.countDocuments()
+      const { pgClient } = await import('../config/supabase');
+      
+      const [ordersResult, countResult] = await Promise.all([
+        pgClient.query(`
+          SELECT * FROM playfood_orders 
+          ORDER BY created_at DESC 
+          LIMIT $1 OFFSET $2
+        `, [limit, offset]),
+        pgClient.query('SELECT COUNT(*) as total FROM playfood_orders')
       ]);
+
+      const total = parseInt(countResult.rows[0].total);
+      const orders = ordersResult.rows;
 
       return {
         orders,
@@ -189,7 +269,7 @@ export class AdminService {
         totalPages: Math.ceil(total / limit)
       };
     } catch (error) {
-      console.error('Error getting orders:', error);
+      logger.error('Error getting orders:', { error });
       return {
         orders: [],
         total: 0,
@@ -197,6 +277,83 @@ export class AdminService {
         totalPages: 1
       };
     }
+  }
+
+  // Métodos auxiliares para estatísticas
+  private async getTotalAmount(): Promise<{ amount: number }> {
+    try {
+      const { pgClient } = await import('../config/supabase');
+      const result = await pgClient.query('SELECT COALESCE(SUM(amount), 0) as total FROM payments');
+      return { amount: parseFloat(result.rows[0].total) };
+    } catch (error) {
+      logger.error('Error getting total amount:', { error });
+      return { amount: 0 };
+    }
+  }
+
+  private async getPaymentsByStatus(status: string): Promise<{ count: number }> {
+    try {
+      const { pgClient } = await import('../config/supabase');
+      const result = await pgClient.query('SELECT COUNT(*) as total FROM payments WHERE status = $1', [status]);
+      return { count: parseInt(result.rows[0].total) };
+    } catch (error) {
+      logger.error('Error getting payments by status:', { error });
+      return { count: 0 };
+    }
+  }
+
+  private async getPaymentsByDate(dateFrom: string): Promise<{ count: number }> {
+    try {
+      const { pgClient } = await import('../config/supabase');
+      const result = await pgClient.query('SELECT COUNT(*) as total FROM payments WHERE created_at >= $1', [dateFrom]);
+      return { count: parseInt(result.rows[0].total) };
+    } catch (error) {
+      logger.error('Error getting payments by date:', { error });
+      return { count: 0 };
+    }
+  }
+
+  private async getAmountByDate(dateFrom: string): Promise<{ amount: number }> {
+    try {
+      const { pgClient } = await import('../config/supabase');
+      const result = await pgClient.query('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE created_at >= $1', [dateFrom]);
+      return { amount: parseFloat(result.rows[0].total) };
+    } catch (error) {
+      logger.error('Error getting amount by date:', { error });
+      return { amount: 0 };
+    }
+  }
+
+  // Métodos para logs
+  async getApiLogs(filter: any = {}): Promise<{
+    logs: any[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    return await loggingService.getApiLogs(filter);
+  }
+
+  async getPaymentLogs(filter: any = {}): Promise<{
+    logs: any[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    return await loggingService.getPaymentLogs(filter);
+  }
+
+  async getLogStats(): Promise<{
+    totalApiLogs: number;
+    totalPaymentLogs: number;
+    totalAuthLogs: number;
+    todayApiLogs: number;
+    todayPaymentLogs: number;
+    todayAuthLogs: number;
+    errorCount: number;
+    successCount: number;
+  }> {
+    return await loggingService.getLogStats();
   }
 }
 
