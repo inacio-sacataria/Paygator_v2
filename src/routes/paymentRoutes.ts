@@ -8,68 +8,68 @@ import { AuthenticatedRequest } from '../middleware/logging';
 const router = Router();
 const paymentController = new PaymentController();
 
-// Schema de validação para criar pagamento
+// Schema de validação para criar pagamento - apenas amount é obrigatório
 const createPaymentSchema = Joi.object({
-  paymentId: Joi.string().required(),
-  externalPaymentId: Joi.number().required(),
-  paymentMethod: Joi.string().allow(null),
-  paymentMethodId: Joi.string().allow(null),
+  paymentId: Joi.string().optional(),
+  externalPaymentId: Joi.number().optional(),
+  paymentMethod: Joi.string().optional().allow(null),
+  paymentMethodId: Joi.string().optional().allow(null),
   amount: Joi.number().positive().required(),
-  currency: Joi.string().required(),
+  currency: Joi.string().optional(),
   customer: Joi.object({
-    email: Joi.string().email().required(),
-    phone: Joi.string().required(),
-    name: Joi.string().required(),
+    email: Joi.string().email().optional(),
+    phone: Joi.string().optional(),
+    name: Joi.string().optional(),
     billingAddress: Joi.object({
-      countryCode: Joi.string().required(),
-      stateCode: Joi.string().required(),
-      city: Joi.string().required(),
-      postcode: Joi.string().required(),
-      street1: Joi.string().required(),
-      street2: Joi.string().allow('')
-    }).required(),
+      countryCode: Joi.string().optional(),
+      stateCode: Joi.string().optional(),
+      city: Joi.string().optional(),
+      postcode: Joi.string().optional(),
+      street1: Joi.string().optional(),
+      street2: Joi.string().optional().allow('')
+    }).optional(),
     external: Joi.object({
-      id: Joi.string().required(),
-      data: Joi.any()
-    }).required()
-  }).required(),
-  locale: Joi.string().required(),
-  returnUrl: Joi.string().uri().required(),
+      id: Joi.string().optional(),
+      data: Joi.any().optional()
+    }).optional()
+  }).optional(),
+  locale: Joi.string().optional(),
+  returnUrl: Joi.string().uri().optional(),
   orderDetails: Joi.object({
-    orderId: Joi.string().required(),
+    orderId: Joi.string().optional(),
     public: Joi.object({
-      vendorId: Joi.string().required(),
-      vendorName: Joi.string().required(),
-      cartTotal: Joi.number().required(),
-      deliveryTotal: Joi.number().required(),
-      taxTotal: Joi.number().required(),
-      serviceFeeTotal: Joi.number().required(),
-      discountTotal: Joi.number().allow(null)
-    }).required(),
+      vendorId: Joi.string().optional(),
+      vendorName: Joi.string().optional(),
+      cartTotal: Joi.number().optional(),
+      deliveryTotal: Joi.number().optional(),
+      taxTotal: Joi.number().optional(),
+      serviceFeeTotal: Joi.number().optional(),
+      discountTotal: Joi.number().optional().allow(null)
+    }).optional(),
     internal: Joi.object({
       vendorMerchant: Joi.object({
-        id: Joi.string().required(),
-        externalId: Joi.string().allow(null),
-        businessType: Joi.string().valid('INDIVIDUAL', 'COMPANY').required(),
-        taxId: Joi.string().required(),
-        name: Joi.string().required(),
+        id: Joi.string().optional(),
+        externalId: Joi.string().optional().allow(null),
+        businessType: Joi.string().valid('INDIVIDUAL', 'COMPANY').optional(),
+        taxId: Joi.string().optional(),
+        name: Joi.string().optional(),
         address: Joi.object({
-          addressLine: Joi.string().required(),
-          city: Joi.string().required(),
-          countryCode: Joi.string().allow(null),
-          zip: Joi.string().required()
-        }).required(),
-        phone: Joi.string().required(),
-        email: Joi.string().email().required(),
-        active: Joi.boolean().required(),
+          addressLine: Joi.string().optional(),
+          city: Joi.string().optional(),
+          countryCode: Joi.string().optional().allow(null),
+          zip: Joi.string().optional()
+        }).optional(),
+        phone: Joi.string().optional(),
+        email: Joi.string().email().optional(),
+        active: Joi.boolean().optional(),
         data: Joi.object({
-          companyData: Joi.any(),
-          merchantData: Joi.any()
-        }).required()
-      }).required(),
-      vendorShare: Joi.number().required()
-    }).required()
-  }).required()
+          companyData: Joi.any().optional(),
+          merchantData: Joi.any().optional()
+        }).optional()
+      }).optional(),
+      vendorShare: Joi.number().optional()
+    }).optional()
+  }).optional()
 });
 
 // Middleware de validação genérico

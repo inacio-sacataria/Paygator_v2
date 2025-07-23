@@ -1,46 +1,44 @@
-import mongoose from 'mongoose';
-import { config } from '../config/environment';
-import { logger } from '../utils/logger';
+import { supabaseService, initializeSupabase } from './supabase.js';
+import { logger } from '../utils/logger.js';
+
+let isConnected = false;
 
 export const connectDatabase = async (): Promise<void> => {
   try {
-    await mongoose.connect('mongodb+srv://inaciosacataria:d0nt2025D0drugs@cluster.mongodb.net/paygator?retryWrites=true&w=majority', {
-      dbName: 'paygator',
-    });
+    // Initialize PostgreSQL connection
+    await initializeSupabase();
     
+    const connectionTest = await supabaseService.testConnection();
     
-    
-    logger.info('MongoDB connected successfully', {
-      database: config.database.dbName,
-      uri: config.database.uri.replace(/\/\/.*@/, '//***:***@') // Hide credentials in logs
-    });
+    if (connectionTest) {
+      isConnected = true;
+      logger.info('Supabase PostgreSQL connected successfully');
+    } else {
+      throw new Error('Failed to connect to Supabase PostgreSQL');
+    }
   } catch (error) {
-    logger.error('Error connecting to MongoDB:', error);
-    throw error; // Deixa o app.ts lidar com o erro
+    logger.error('Error connecting to Supabase PostgreSQL:', error);
+    throw error;
   }
 };
 
 export const disconnectDatabase = async (): Promise<void> => {
   try {
-    await mongoose.disconnect();
-    logger.info('MongoDB disconnected successfully');
+    // Supabase client doesn't need explicit disconnection
+    isConnected = false;
+    logger.info('Supabase disconnected successfully');
   } catch (error) {
-    logger.error('Error disconnecting from MongoDB:', error);
+    logger.error('Error disconnecting from Supabase:', error);
   }
 };
 
-// Handle MongoDB connection events
-mongoose.connection.on('error', (error) => {
-  logger.error('MongoDB connection error:', error);
-});
-
-mongoose.connection.on('disconnected', () => {
-  logger.warn('MongoDB disconnected');
-});
-
-mongoose.connection.on('reconnected', () => {
-  logger.info('MongoDB reconnected');
-});
+// Handle Supabase connection events
+export const getDatabaseStatus = (): { connected: boolean; provider: string } => {
+  return {
+    connected: isConnected,
+    provider: 'supabase'
+  };
+};
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
@@ -51,4 +49,7 @@ process.on('SIGINT', async () => {
 process.on('SIGTERM', async () => {
   await disconnectDatabase();
   process.exit(0);
-}); 
+});
+
+// Export Supabase service for use in other modules
+export { supabaseService }; 

@@ -14,14 +14,24 @@ export const config = {
     apiKeys: [
       process.env['API_KEY'] || 'main_4c614d6eb046010889a8eaba36efc8e930c9656e9a4f6c553ca9cc667b267e1e',
       process.env['PLAYFOOD_API_KEY'] || 'playfood_18414ed9a7e6696a91081d51c25895c32bfa9483bd959ae5',
+      // User's new API key
+      'main_70a3ae2d414936451d05d19f7ca4b01c1761ee04b519b93961f56fa2a27cc914',
       // Keep backward compatibility
       process.env['API_KEY_SECRET'] || 'default-api-key-secret'
     ].filter(Boolean), // Remove empty values
     jwtSecret: process.env['JWT_SECRET'] || 'default-jwt-secret',
   },
   database: {
+    // MongoDB configuration (legacy)
     uri: process.env['MONGODB_URI'] || 'mongodb+srv://inaciosacataria:d0nt2025D0drugs@cluster.mongodb.net/paygator?retryWrites=true&w=majority',
     dbName: process.env['MONGODB_DB_NAME'] || 'paygator',
+    // Supabase configuration
+    supabase: {
+      url: process.env['NEXT_PUBLIC_SUPABASE_URL'] || 'https://yrnaggnrbgetralcevqi.supabase.co',
+      anonKey: process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybmFnZ25yYmdldHJhbGNldnFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NjExNjYsImV4cCI6MjA2NDQzNzE2Nn0.H7JdfyRK1-AFH0fn_rKa5nE2GurqH9O38JXBHXuyJyQ',
+      // PostgreSQL connection string
+      postgresUrl: process.env['DATABASE_URL'] || 'postgresql://postgres:.7K8.PfQWJH@#-d@db.llrcdfutvjrrccgytbjh.supabase.co:5432/postgres',
+    },
   },
   redis: {
     url: process.env['REDIS_URL'] || 'redis://localhost:6379',

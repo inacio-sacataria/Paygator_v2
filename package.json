@@ -28,8 +28,10 @@
   "author": "Paygator Team",
   "license": "MIT",
   "dependencies": {
+    "@supabase/supabase-js": "^2.52.0",
     "@types/body-parser": "^1.19.6",
     "@types/ejs": "^3.1.5",
+    "@types/pg": "^8.15.4",
     "body-parser": "^2.2.0",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
@@ -43,6 +45,7 @@
     "helmet": "^7.1.0",
     "joi": "^17.11.0",
     "mongoose": "^8.0.3",
+    "pg": "^8.16.3",
     "redis": "^4.6.10",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",

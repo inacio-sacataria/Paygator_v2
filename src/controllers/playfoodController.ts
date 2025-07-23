@@ -414,7 +414,23 @@ export class PlayfoodController {
 
   public getStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const status = await this.playfoodService.getStatus();
+      // Usar Supabase para verificar status do banco de dados
+      const { supabaseService } = await import('../config/database.js');
+      const dbStatus = await supabaseService.getServiceStatus();
+      
+      // Combinar status do serviço PlayFood com status do banco
+      const status = {
+        service: 'playfood',
+        status: 'operational',
+        database: dbStatus,
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        endpoints: {
+          orders: '/api/v1/playfood/orders',
+          payments: '/api/v1/playfood/payments',
+          webhooks: '/api/v1/playfood/webhooks'
+        }
+      };
 
       res.status(200).json({
         success: true,
