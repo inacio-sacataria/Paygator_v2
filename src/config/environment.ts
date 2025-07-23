@@ -9,8 +9,14 @@ export const config = {
     apiVersion: process.env['API_VERSION'] || 'v1',
   },
   security: {
-    webhookSecret: process.env['WEBHOOK_SECRET'] || 'default-secret-change-in-production',
-    apiKeySecret: process.env['API_KEY_SECRET'] || 'default-api-key-secret',
+    webhookSecret: process.env['WEBHOOK_SECRET'] || '1a02aa5907a7bc447b392f07548cf2a0f7713be742787327e4c4302c6960ee24',
+    // Support multiple API keys
+    apiKeys: [
+      process.env['API_KEY'] || 'main_4c614d6eb046010889a8eaba36efc8e930c9656e9a4f6c553ca9cc667b267e1e',
+      process.env['PLAYFOOD_API_KEY'] || 'playfood_18414ed9a7e6696a91081d51c25895c32bfa9483bd959ae5',
+      // Keep backward compatibility
+      process.env['API_KEY_SECRET'] || 'default-api-key-secret'
+    ].filter(Boolean), // Remove empty values
     jwtSecret: process.env['JWT_SECRET'] || 'default-jwt-secret',
   },
   database: {

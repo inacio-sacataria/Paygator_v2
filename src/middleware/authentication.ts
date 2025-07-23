@@ -25,13 +25,15 @@ export const authenticateApiKey = (req: AuthenticatedRequest, res: Response, nex
     return;
   }
 
-  // Em produção, você deve validar contra um banco de dados
-  // Por simplicidade, estamos usando uma validação básica
-  if (apiKey !== config.security.apiKeySecret) {
+  // Validate against multiple API keys
+  const isValidApiKey = config.security.apiKeys.includes(apiKey);
+  
+  if (!isValidApiKey) {
     logger.warn('Invalid API key', { 
       correlationId: req.correlationId,
       ip: req.ip,
-      userAgent: req.get('User-Agent')
+      userAgent: req.get('User-Agent'),
+      providedKey: apiKey.substring(0, 10) + '...' // Log partial key for debugging
     });
     res.status(401).json({
       success: false,
@@ -50,12 +52,13 @@ export const optionalApiKey = (req: AuthenticatedRequest, res: Response, next: N
   const apiKey = req.headers['x-api-key'] as string;
   
   if (apiKey) {
-    if (apiKey === config.security.apiKeySecret) {
+    if (config.security.apiKeys.includes(apiKey)) {
       req.apiKey = apiKey;
     } else {
       logger.warn('Invalid optional API key', { 
         correlationId: req.correlationId,
-        ip: req.ip
+        ip: req.ip,
+        providedKey: apiKey.substring(0, 10) + '...'
       });
     }
   }

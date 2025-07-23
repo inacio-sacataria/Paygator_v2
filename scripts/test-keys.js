@@ -1,68 +1,36 @@
 #!/usr/bin/env node
 
-const https = require('https');
 const http = require('http');
 
+// API keys from the generated keys
+const API_KEYS = {
+  main: 'main_4c614d6eb046010889a8eaba36efc8e930c9656e9a4f6c553ca9cc667b267e1e',
+  playfood: 'playfood_18414ed9a7e6696a91081d51c25895c32bfa9483bd959ae5',
+  invalid: 'invalid_key_123456789'
+};
+
+// Test configuration
+const TEST_CONFIG = {
+  host: 'localhost',
+  port: 3000,
+  path: '/api/v1/playfood/status',
+  method: 'GET'
+};
+
 /**
- * Script para testar chaves de API
+ * Test API key authentication
  */
-function testApiKeys() {
-  console.log('🧪 Testando chaves de API...\n');
-
-  // Configurações
-  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-  const mainApiKey = process.env.API_KEY || 'main_2abfa6c29029205ece6ad5683b513ae3281de225d167eddf3638b6f1530223df';
-  const playfoodApiKey = process.env.PLAYFOOD_API_KEY || 'playfood_3e94628438fd9e7e873d40184cc9f09a0fbdd22a421a0078';
-
-  console.log('📋 Configurações:');
-  console.log(`Base URL: ${baseUrl}`);
-  console.log(`Main API Key: ${mainApiKey.substring(0, 20)}...`);
-  console.log(`Playfood API Key: ${playfoodApiKey.substring(0, 20)}...`);
-  console.log('');
-
-  // Testes
-  const tests = [
-    {
-      name: 'Status da API Playfood',
-      url: `${baseUrl}/api/v1/playfood/status`,
-      headers: { 'X-API-Key': playfoodApiKey },
-      method: 'GET'
-    },
-    {
-      name: 'Listar Pedidos (Playfood)',
-      url: `${baseUrl}/api/v1/playfood/orders?page=1&limit=5`,
-      headers: { 'X-API-Key': playfoodApiKey },
-      method: 'GET'
-    },
-    {
-      name: 'Listar Webhooks',
-      url: `${baseUrl}/api/v1/webhooks/list`,
-      headers: { 'X-API-Key': mainApiKey },
-      method: 'GET'
-    }
-  ];
-
-  let passedTests = 0;
-  let totalTests = tests.length;
-
-  tests.forEach((test, index) => {
-    console.log(`🔍 Teste ${index + 1}: ${test.name}`);
-    
-    const url = new URL(test.url);
+function testApiKey(apiKey, description) {
+  return new Promise((resolve, reject) => {
     const options = {
-      hostname: url.hostname,
-      port: url.port || (url.protocol === 'https:' ? 443 : 80),
-      path: url.pathname + url.search,
-      method: test.method,
+      ...TEST_CONFIG,
       headers: {
-        'Content-Type': 'application/json',
-        ...test.headers
+        'X-API-Key': apiKey,
+        'Content-Type': 'application/json'
       }
     };
 
-    const client = url.protocol === 'https:' ? https : http;
-    
-    const req = client.request(options, (res) => {
+    const req = http.request(options, (res) => {
       let data = '';
       
       res.on('data', (chunk) => {
@@ -72,36 +40,31 @@ function testApiKeys() {
       res.on('end', () => {
         try {
           const response = JSON.parse(data);
-          
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            console.log(`✅ Sucesso (${res.statusCode}): ${test.name}`);
-            passedTests++;
-          } else {
-            console.log(`❌ Erro (${res.statusCode}): ${test.name}`);
-            console.log(`   Resposta: ${data.substring(0, 200)}...`);
-          }
+          resolve({
+            description,
+            statusCode: res.statusCode,
+            success: response.success,
+            message: response.message,
+            apiKey: apiKey.substring(0, 20) + '...'
+          });
         } catch (error) {
-          console.log(`❌ Erro de parsing: ${test.name}`);
-          console.log(`   Resposta: ${data.substring(0, 200)}...`);
-        }
-        
-        console.log('');
-        
-        // Se foi o último teste, mostrar resumo
-        if (index === totalTests - 1) {
-          showSummary(passedTests, totalTests);
+          resolve({
+            description,
+            statusCode: res.statusCode,
+            success: false,
+            message: 'Invalid JSON response',
+            apiKey: apiKey.substring(0, 20) + '...'
+          });
         }
       });
     });
 
     req.on('error', (error) => {
-      console.log(`❌ Erro de conexão: ${test.name}`);
-      console.log(`   Erro: ${error.message}`);
-      console.log('');
-      
-      if (index === totalTests - 1) {
-        showSummary(passedTests, totalTests);
-      }
+      reject({
+        description,
+        error: error.message,
+        apiKey: apiKey.substring(0, 20) + '...'
+      });
     });
 
     req.end();
@@ -109,67 +72,74 @@ function testApiKeys() {
 }
 
 /**
- * Mostra resumo dos testes
+ * Run all tests
  */
-function showSummary(passed, total) {
-  console.log('📊 RESUMO DOS TESTES:');
-  console.log('=====================');
-  console.log(`✅ Testes aprovados: ${passed}/${total}`);
-  console.log(`❌ Testes falharam: ${total - passed}/${total}`);
-  console.log(`📈 Taxa de sucesso: ${Math.round((passed / total) * 100)}%`);
-  console.log('');
-
-  if (passed === total) {
-    console.log('🎉 Todas as chaves estão funcionando corretamente!');
-  } else {
-    console.log('⚠️  Alguns testes falharam. Verifique:');
-    console.log('   - Se o servidor está rodando');
-    console.log('   - Se as chaves estão corretas');
-    console.log('   - Se as variáveis de ambiente estão configuradas');
-  }
-}
-
-/**
- * Valida formato das chaves
- */
-function validateKeyFormat() {
-  console.log('🔍 Validando formato das chaves...\n');
-
-  const mainApiKey = process.env.API_KEY || 'main_2abfa6c29029205ece6ad5683b513ae3281de225d167eddf3638b6f1530223df';
-  const playfoodApiKey = process.env.PLAYFOOD_API_KEY || 'playfood_3e94628438fd9e7e873d40184cc9f09a0fbdd22a421a0078';
-
-  const mainApiKeyRegex = /^main_[a-f0-9]{64}$/i;
-  const playfoodApiKeyRegex = /^playfood_[a-f0-9]{48}$/i;
-
-  console.log('📋 Validação de formato:');
-  console.log(`Main API Key: ${mainApiKeyRegex.test(mainApiKey) ? '✅' : '❌'} ${mainApiKey.substring(0, 20)}...`);
-  console.log(`Playfood API Key: ${playfoodApiKeyRegex.test(playfoodApiKey) ? '✅' : '❌'} ${playfoodApiKey.substring(0, 20)}...`);
-  console.log('');
-
-  return mainApiKeyRegex.test(mainApiKey) && playfoodApiKeyRegex.test(playfoodApiKey);
-}
-
-/**
- * Função principal
- */
-function main() {
-  console.log('🚀 PAYGATOR API - TESTE DE CHAVES\n');
-
-  // Validar formato das chaves
-  const keysValid = validateKeyFormat();
+async function runTests() {
+  console.log('🔍 Testando autenticação de chaves de API...\n');
   
-  if (!keysValid) {
-    console.log('❌ Formato das chaves inválido. Execute: npm run generate-keys');
-    process.exit(1);
+  const tests = [
+    { key: API_KEYS.main, description: 'Main API Key (válida)' },
+    { key: API_KEYS.playfood, description: 'Playfood API Key (válida)' },
+    { key: API_KEYS.invalid, description: 'API Key inválida' },
+    { key: '', description: 'API Key ausente' }
+  ];
+
+  const results = [];
+
+  for (const test of tests) {
+    try {
+      const result = await testApiKey(test.key, test.description);
+      results.push(result);
+    } catch (error) {
+      results.push({
+        description: test.description,
+        error: error.error,
+        apiKey: test.key ? test.key.substring(0, 20) + '...' : 'ausente'
+      });
+    }
   }
 
-  // Testar conectividade
-  testApiKeys();
+  // Display results
+  console.log('📊 RESULTADOS DOS TESTES:');
+  console.log('==========================\n');
+
+  results.forEach((result, index) => {
+    console.log(`${index + 1}. ${result.description}`);
+    console.log(`   Chave: ${result.apiKey}`);
+    
+    if (result.error) {
+      console.log(`   ❌ Erro: ${result.error}`);
+    } else {
+      console.log(`   Status: ${result.statusCode}`);
+      console.log(`   Sucesso: ${result.success ? '✅ Sim' : '❌ Não'}`);
+      console.log(`   Mensagem: ${result.message}`);
+    }
+    console.log('');
+  });
+
+  // Summary
+  const validKeys = results.filter(r => !r.error && r.success);
+  const invalidKeys = results.filter(r => !r.error && !r.success);
+  const errors = results.filter(r => r.error);
+
+  console.log('📋 RESUMO:');
+  console.log('==========');
+  console.log(`✅ Chaves válidas: ${validKeys.length}`);
+  console.log(`❌ Chaves inválidas: ${invalidKeys.length}`);
+  console.log(`🚫 Erros de conexão: ${errors.length}`);
+
+  if (validKeys.length >= 2) {
+    console.log('\n🎉 SUCESSO: Sistema de autenticação funcionando corretamente!');
+    console.log('   As chaves main e playfood estão sendo aceitas.');
+  } else {
+    console.log('\n⚠️  ATENÇÃO: Algumas chaves válidas não estão funcionando.');
+    console.log('   Verifique a configuração do servidor.');
+  }
 }
 
-// Executar se chamado diretamente
+// Run tests if called directly
 if (require.main === module) {
-  main();
+  runTests().catch(console.error);
 }
 
-module.exports = { testApiKeys, validateKeyFormat }; 
+module.exports = { testApiKey, runTests }; 

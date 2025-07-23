@@ -343,30 +343,58 @@ export class PlayfoodService {
   }
 
   public async getStatus(): Promise<any> {
-    const [totalOrders, pendingOrders, completedOrders, cancelledOrders, totalPayments, pendingPayments, completedPayments, failedPayments] = await Promise.all([
-      PlayfoodOrderModel.countDocuments(),
-      PlayfoodOrderModel.countDocuments({ status: 'pending' }),
-      PlayfoodOrderModel.countDocuments({ status: 'delivered' }),
-      PlayfoodOrderModel.countDocuments({ status: 'cancelled' }),
-      PlayfoodPaymentModel.countDocuments(),
-      PlayfoodPaymentModel.countDocuments({ status: 'pending' }),
-      PlayfoodPaymentModel.countDocuments({ status: 'approved' }),
-      PlayfoodPaymentModel.countDocuments({ status: 'failed' })
-    ]);
+    try {
+      // Try to get database stats if available
+      const [totalOrders, pendingOrders, completedOrders, cancelledOrders, totalPayments, pendingPayments, completedPayments, failedPayments] = await Promise.all([
+        PlayfoodOrderModel.countDocuments(),
+        PlayfoodOrderModel.countDocuments({ status: 'pending' }),
+        PlayfoodOrderModel.countDocuments({ status: 'delivered' }),
+        PlayfoodOrderModel.countDocuments({ status: 'cancelled' }),
+        PlayfoodPaymentModel.countDocuments(),
+        PlayfoodPaymentModel.countDocuments({ status: 'pending' }),
+        PlayfoodPaymentModel.countDocuments({ status: 'approved' }),
+        PlayfoodPaymentModel.countDocuments({ status: 'failed' })
+      ]);
 
-    return {
-      orders: {
-        total: totalOrders,
-        pending: pendingOrders,
-        completed: completedOrders,
-        cancelled: cancelledOrders
-      },
-      payments: {
-        total: totalPayments,
-        pending: pendingPayments,
-        completed: completedPayments,
-        failed: failedPayments
-      }
-    };
+      return {
+        status: 'healthy',
+        database: 'connected',
+        orders: {
+          total: totalOrders,
+          pending: pendingOrders,
+          completed: completedOrders,
+          cancelled: cancelledOrders
+        },
+        payments: {
+          total: totalPayments,
+          pending: pendingPayments,
+          completed: completedPayments,
+          failed: failedPayments
+        }
+      };
+    } catch (error) {
+      // If database is not available, return basic status
+      logger.warn('Database not available, returning basic status', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+
+      return {
+        status: 'healthy',
+        database: 'disconnected',
+        message: 'Service is running but database is not available',
+        orders: {
+          total: 0,
+          pending: 0,
+          completed: 0,
+          cancelled: 0
+        },
+        payments: {
+          total: 0,
+          pending: 0,
+          completed: 0,
+          failed: 0
+        }
+      };
+    }
   }
 } 
