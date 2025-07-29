@@ -11,14 +11,16 @@ export const supabase = createClient(
 
 // Create PostgreSQL client for direct database access
 export const pgClient = new Client({
-  host: 'db.llrcdfutvjrrccgytbjh.supabase.co',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password: '.7K8.PfQWJH@#-d',
+  host: process.env['SUPABASE_HOST'] || 'db.llrcdfutvjrrccgytbjh.supabase.co',
+  port: parseInt(process.env['SUPABASE_PORT'] || '5432', 10),
+  database: process.env['SUPABASE_DATABASE'] || 'postgres',
+  user: process.env['SUPABASE_USER'] || 'postgres',
+  password: process.env['SUPABASE_PASSWORD'] || '.7K8.PfQWJH@#-d',
   ssl: {
     rejectUnauthorized: false
-  }
+  },
+  // Configurações adicionais para melhor conectividade
+  connectionTimeoutMillis: 10000
 });
 
 // Database service class for Supabase operations
@@ -200,15 +202,34 @@ export async function initializeSupabase() {
   if (!isConnected) {
     try {
       logger.info('Connecting to PostgreSQL...');
-      await pgClient.connect();
-      isConnected = true;
-      logger.info('PostgreSQL connection established successfully');
       
-      // Test the connection
-      const testResult = await pgClient.query('SELECT NOW() as current_time');
-      logger.info('PostgreSQL test query successful:', { currentTime: testResult.rows[0].current_time });
+      // Tentar conectar com retry
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          await pgClient.connect();
+          isConnected = true;
+          logger.info('PostgreSQL connection established successfully');
+          
+          // Test the connection
+          const testResult = await pgClient.query('SELECT NOW() as current_time');
+          logger.info('PostgreSQL test query successful:', { currentTime: testResult.rows[0].current_time });
+          break;
+        } catch (error) {
+          retries--;
+          if (retries === 0) {
+            throw error;
+          }
+          logger.warn(`Connection attempt failed, retrying... (${retries} attempts left)`, { 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          });
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Esperar 2 segundos antes de tentar novamente
+        }
+      }
     } catch (error) {
-      logger.error('Failed to connect to PostgreSQL', { error: error instanceof Error ? error.message : 'Unknown error' });
+      logger.error('Failed to connect to PostgreSQL after all retries', { 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      });
       throw error;
     }
   } else {

@@ -16,7 +16,8 @@
     "docker:build": "docker build -t paygator-webhook-api .",
     "docker:run": "docker run -p 3000:3000 paygator-webhook-api",
     "generate-keys": "node scripts/generate-keys.js",
-    "keys": "npm run generate-keys"
+    "keys": "npm run generate-keys",
+    "test-db": "node scripts/test-database-connection.js"
   },
   "keywords": [
     "webhook",
