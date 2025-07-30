@@ -414,9 +414,9 @@ export class PlayfoodController {
 
   public getStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      // Usar Supabase para verificar status do banco de dados
-      const { supabaseService } = await import('../config/database.js');
-      const dbStatus = await supabaseService.getServiceStatus();
+      // Usar SQLite para verificar status do banco de dados
+      const { getDatabaseStatus } = await import('../config/database.js');
+      const dbStatus = getDatabaseStatus();
       
       // Combinar status do serviço PlayFood com status do banco
       const status = {

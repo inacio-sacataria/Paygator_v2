@@ -1,4 +1,4 @@
-import { supabaseService } from '../config/database.js';
+import { sqliteService } from './sqliteService.js';
 import { loggingService } from './loggingService.js';
 import { logger } from '../utils/logger.js';
 
@@ -59,43 +59,40 @@ export class AdminService {
   
   async getDashboardStats(): Promise<DashboardStats> {
     try {
-      logger.info('Getting dashboard stats from Supabase...');
+      logger.info('Getting dashboard stats from SQLite...');
       
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayISO = today.toISOString();
       
-      // Buscar estatísticas do Supabase
-      const [
-        totalPaymentsResult,
-        totalAmountResult,
-        successfulPaymentsResult,
-        pendingPaymentsResult,
-        failedPaymentsResult,
-        todayPaymentsResult,
-        todayAmountResult
-      ] = await Promise.all([
-        supabaseService.getPaymentsCount(),
-        this.getTotalAmount(),
-        this.getPaymentsByStatus('approved'),
-        this.getPaymentsByStatus('pending'),
-        this.getPaymentsByStatus('failed'),
-        this.getPaymentsByDate(todayISO),
-        this.getAmountByDate(todayISO)
-      ]);
+      // Buscar estatísticas do SQLite
+      const stats = await sqliteService.getStatistics();
+      
+      // Calcular estatísticas específicas
+      const successfulPayments = stats.recentPayments.filter(p => p.status === 'approved').length;
+      const pendingPayments = stats.recentPayments.filter(p => p.status === 'pending').length;
+      const failedPayments = stats.recentPayments.filter(p => p.status === 'failed').length;
+      
+      const totalAmount = stats.recentPayments.reduce((sum, p) => sum + p.amount, 0);
+      const todayPayments = stats.recentPayments.filter(p => 
+        new Date(p.created_at!).toDateString() === today.toDateString()
+      ).length;
+      const todayAmount = stats.recentPayments.filter(p => 
+        new Date(p.created_at!).toDateString() === today.toDateString()
+      ).reduce((sum, p) => sum + p.amount, 0);
 
-      const stats = {
-        totalPayments: totalPaymentsResult.count || 0,
-        totalAmount: totalAmountResult.amount || 0,
-        successfulPayments: successfulPaymentsResult.count || 0,
-        pendingPayments: pendingPaymentsResult.count || 0,
-        failedPayments: failedPaymentsResult.count || 0,
-        todayPayments: todayPaymentsResult.count || 0,
-        todayAmount: todayAmountResult.amount || 0
+      const dashboardStats = {
+        totalPayments: stats.totalPayments,
+        totalAmount: totalAmount,
+        successfulPayments,
+        pendingPayments,
+        failedPayments,
+        todayPayments,
+        todayAmount
       };
 
-      logger.info('Dashboard stats retrieved successfully:', stats);
-      return stats;
+      logger.info('Dashboard stats retrieved successfully:', dashboardStats);
+      return dashboardStats;
     } catch (error) {
       logger.error('Error getting dashboard stats, using demo data:', { error });
       // Retornar dados de demonstração quando não há conexão com o banco
@@ -122,61 +119,57 @@ export class AdminService {
       const limit = filter.limit || 10;
       const offset = (page - 1) * limit;
 
-      // Construir query SQL
-      let whereClause = 'WHERE 1=1';
-      const params: any[] = [];
-      let paramIndex = 1;
-
+      // Buscar pagamentos do SQLite
+      const payments = await sqliteService.getPayments(limit, offset);
+      
+      // Filtrar por status se especificado
+      let filteredPayments = payments;
       if (filter.status) {
-        whereClause += ` AND status = $${paramIndex++}`;
-        params.push(filter.status);
+        filteredPayments = payments.filter(p => p.status === filter.status);
       }
       
+      // Filtrar por método se especificado
       if (filter.method) {
-        whereClause += ` AND payment_method = $${paramIndex++}`;
-        params.push(filter.method);
+        filteredPayments = payments.filter(p => p.provider === filter.method);
       }
       
+      // Filtrar por data se especificado
       if (filter.dateFrom) {
-        whereClause += ` AND created_at >= $${paramIndex++}`;
-        params.push(filter.dateFrom.toISOString());
+        filteredPayments = filteredPayments.filter(p => 
+          new Date(p.created_at!) >= filter.dateFrom!
+        );
       }
       
       if (filter.dateTo) {
-        whereClause += ` AND created_at <= $${paramIndex++}`;
-        params.push(filter.dateTo.toISOString());
+        filteredPayments = filteredPayments.filter(p => 
+          new Date(p.created_at!) <= filter.dateTo!
+        );
       }
 
-      // Query para buscar pagamentos
-      const query = `
-        SELECT * FROM payments 
-        ${whereClause}
-        ORDER BY created_at DESC 
-        LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-      `;
-      params.push(limit, offset);
-
-      // Query para contar total
-      const countQuery = `
-        SELECT COUNT(*) as total FROM payments 
-        ${whereClause}
-      `;
-
-      const { pgClient } = await import('../config/supabase');
-      
-      const [paymentsResult, countResult] = await Promise.all([
-        pgClient.query(query, params),
-        pgClient.query(countQuery, params.slice(0, -2)) // Remove limit e offset
-      ]);
-
-      const total = parseInt(countResult.rows[0].total);
-      const payments = paymentsResult.rows;
+      // Converter para o formato esperado
+      const formattedPayments: Payment[] = filteredPayments.map(p => ({
+        id: p.id!,
+        payment_id: p.payment_id,
+        external_payment_id: p.payment_id, // Usar payment_id como external_payment_id
+        amount: p.amount,
+        currency: p.currency || 'BRL',
+        payment_method: p.provider,
+        customer_email: 'demo@example.com', // Placeholder
+        customer_name: 'Demo Customer', // Placeholder
+        customer_phone: '+5511999999999', // Placeholder
+        status: p.status,
+        order_id: p.payment_id, // Usar payment_id como order_id
+        return_url: 'https://example.com/success', // Placeholder
+        iframe_link: `https://payment-gateway.com/pay/${p.payment_id}`, // Placeholder
+        created_at: p.created_at!,
+        updated_at: p.updated_at!
+      }));
 
       return {
-        payments,
-        total,
+        payments: formattedPayments,
+        total: formattedPayments.length,
         page,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(formattedPayments.length / limit)
       };
     } catch (error) {
       logger.error('Error getting payments, using demo data:', { error });
@@ -248,25 +241,31 @@ export class AdminService {
     try {
       const offset = (page - 1) * limit;
       
-      const { pgClient } = await import('../config/supabase');
+      // Buscar pedidos do SQLite
+      const orders = await sqliteService.getPlayfoodOrders(limit, offset);
       
-      const [ordersResult, countResult] = await Promise.all([
-        pgClient.query(`
-          SELECT * FROM playfood_orders 
-          ORDER BY created_at DESC 
-          LIMIT $1 OFFSET $2
-        `, [limit, offset]),
-        pgClient.query('SELECT COUNT(*) as total FROM playfood_orders')
-      ]);
-
-      const total = parseInt(countResult.rows[0].total);
-      const orders = ordersResult.rows;
+      // Converter para o formato esperado
+      const formattedOrders: Order[] = orders.map(o => ({
+        id: o.id!,
+        order_id: o.order_id,
+        external_order_id: o.order_id, // Usar order_id como external_order_id
+        customer_id: o.customer_id || 'demo_customer',
+        customer_name: 'Demo Customer', // Placeholder
+        customer_email: 'demo@example.com', // Placeholder
+        customer_phone: '+5511999999999', // Placeholder
+        total_amount: o.total_amount,
+        currency: 'BRL',
+        status: o.status,
+        items: o.items ? JSON.parse(o.items) : [],
+        created_at: o.created_at!,
+        updated_at: o.updated_at!
+      }));
 
       return {
-        orders,
-        total,
+        orders: formattedOrders,
+        total: formattedOrders.length,
         page,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(formattedOrders.length / limit)
       };
     } catch (error) {
       logger.error('Error getting orders:', { error });
@@ -279,50 +278,7 @@ export class AdminService {
     }
   }
 
-  // Métodos auxiliares para estatísticas
-  private async getTotalAmount(): Promise<{ amount: number }> {
-    try {
-      const { pgClient } = await import('../config/supabase');
-      const result = await pgClient.query('SELECT COALESCE(SUM(amount), 0) as total FROM payments');
-      return { amount: parseFloat(result.rows[0].total) };
-    } catch (error) {
-      logger.error('Error getting total amount:', { error });
-      return { amount: 0 };
-    }
-  }
 
-  private async getPaymentsByStatus(status: string): Promise<{ count: number }> {
-    try {
-      const { pgClient } = await import('../config/supabase');
-      const result = await pgClient.query('SELECT COUNT(*) as total FROM payments WHERE status = $1', [status]);
-      return { count: parseInt(result.rows[0].total) };
-    } catch (error) {
-      logger.error('Error getting payments by status:', { error });
-      return { count: 0 };
-    }
-  }
-
-  private async getPaymentsByDate(dateFrom: string): Promise<{ count: number }> {
-    try {
-      const { pgClient } = await import('../config/supabase');
-      const result = await pgClient.query('SELECT COUNT(*) as total FROM payments WHERE created_at >= $1', [dateFrom]);
-      return { count: parseInt(result.rows[0].total) };
-    } catch (error) {
-      logger.error('Error getting payments by date:', { error });
-      return { count: 0 };
-    }
-  }
-
-  private async getAmountByDate(dateFrom: string): Promise<{ amount: number }> {
-    try {
-      const { pgClient } = await import('../config/supabase');
-      const result = await pgClient.query('SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE created_at >= $1', [dateFrom]);
-      return { amount: parseFloat(result.rows[0].total) };
-    } catch (error) {
-      logger.error('Error getting amount by date:', { error });
-      return { amount: 0 };
-    }
-  }
 
   // Métodos para logs
   async getApiLogs(filter: any = {}): Promise<{

@@ -1,0 +1,65 @@
+services:
+  # PostgreSQL Service
+  - type: postgresql
+    name: paygator-postgres
+    plan: starter
+    region: oregon
+    databaseName: paygator
+    user: paygator_user
+
+  # Web Service
+  - type: web
+    name: paygator-webhook-api
+    env: docker
+    plan: starter
+    region: oregon
+    buildCommand: npm run build
+    startCommand: ./entrypoint.sh
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: SUPABASE_HOST
+        fromService:
+          name: paygator-postgres
+          type: postgresql
+          property: host
+      - key: SUPABASE_PORT
+        fromService:
+          name: paygator-postgres
+          type: postgresql
+          property: port
+      - key: SUPABASE_DATABASE
+        fromService:
+          name: paygator-postgres
+          type: postgresql
+          property: database
+      - key: SUPABASE_USER
+        fromService:
+          name: paygator-postgres
+          type: postgresql
+          property: user
+      - key: SUPABASE_PASSWORD
+        fromService:
+          name: paygator-postgres
+          type: postgresql
+          property: password
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: LOG_LEVEL
+        value: info
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: ALLOWED_METHODS
+        value: "GET,POST,PUT,DELETE,OPTIONS"
+      - key: ALLOWED_HEADERS
+        value: "Content-Type,Authorization,X-API-Key,X-Webhook-Signature"
+    healthCheckPath: /health
+    autoDeploy: true 

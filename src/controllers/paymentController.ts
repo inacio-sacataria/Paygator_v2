@@ -3,7 +3,7 @@ import { CreatePaymentRequest, CreatePaymentResponse } from '../types/payment';
 import { logger } from '../utils/logger.js';
 import { loggingService } from '../services/loggingService.js';
 import { AuthenticatedRequest } from '../middleware/logging.js';
-import { supabaseService } from '../config/database.js';
+import { sqliteService } from '../services/sqliteService.js';
 
 export class PaymentController {
   public createPayment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -120,14 +120,17 @@ export class PaymentController {
         iframe_link: iframeLink
       };
 
-      const dbResult = await supabaseService.createPayment(paymentRecord);
+      const dbResult = await sqliteService.createPayment({
+        payment_id: paymentDataWithDefaults.paymentId,
+        provider: paymentDataWithDefaults.paymentMethod,
+        amount: paymentDataWithDefaults.amount,
+        currency: paymentDataWithDefaults.currency,
+        status: 'pending',
+        customer_id: paymentDataWithDefaults.customer.external.id,
+        metadata: JSON.stringify(paymentRecord)
+      });
       
-      if (!dbResult.success) {
-        logger.warn('Failed to save payment to database, but continuing with response', {
-          correlationId: req.correlationId,
-          error: dbResult.error
-        });
-      } else {
+      if (dbResult) {
         // Log do pagamento criado
         await loggingService.logPayment({
           paymentId: paymentDataWithDefaults.paymentId,
@@ -138,6 +141,11 @@ export class PaymentController {
           currency: paymentDataWithDefaults.currency,
           customerEmail: paymentDataWithDefaults.customer.email,
           correlationId: req.correlationId || 'unknown'
+        });
+      } else {
+        logger.warn('Failed to save payment to database, but continuing with response', {
+          correlationId: req.correlationId,
+          paymentId: paymentDataWithDefaults.paymentId
         });
       }
 
@@ -208,14 +216,13 @@ export class PaymentController {
         paymentId: paymentId
       });
 
-      // Buscar pagamento no Supabase
-      const dbResult = await supabaseService.getPayment(paymentId);
+      // Buscar pagamento no SQLite
+      const dbResult = await sqliteService.getPaymentById(paymentId);
       
-      if (!dbResult.success) {
+      if (!dbResult) {
         logger.warn('Payment not found in database', {
           correlationId: req.correlationId,
-          paymentId: paymentId,
-          error: dbResult.error
+          paymentId: paymentId
         });
         
         res.status(404).json({
@@ -229,15 +236,15 @@ export class PaymentController {
       }
 
       const paymentStatus = {
-        paymentId: dbResult.data.payment_id,
-        status: dbResult.data.status,
-        amount: dbResult.data.amount,
-        currency: dbResult.data.currency,
-        created_at: dbResult.data.created_at,
-        updated_at: dbResult.data.updated_at,
-        customer_email: dbResult.data.customer_email,
-        customer_name: dbResult.data.customer_name,
-        iframe_link: dbResult.data.iframe_link
+        paymentId: dbResult.payment_id,
+        status: dbResult.status,
+        amount: dbResult.amount,
+        currency: dbResult.currency,
+        created_at: dbResult.created_at,
+        updated_at: dbResult.updated_at,
+        customer_email: 'demo@example.com', // Placeholder
+        customer_name: 'Demo Customer', // Placeholder
+        iframe_link: `https://payment-gateway.com/pay/${dbResult.payment_id}` // Placeholder
       };
 
       res.status(200).json({

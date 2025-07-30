@@ -1,42 +1,38 @@
-import { supabaseService, initializeSupabase } from './supabase';
+import { connectSQLite, disconnectSQLite, getSQLiteStatus, getDatabase } from './sqlite';
 import { logger } from '../utils/logger.js';
 
 let isConnected = false;
 
 export const connectDatabase = async (): Promise<void> => {
   try {
-    // Initialize PostgreSQL connection
-    await initializeSupabase();
+    // Initialize SQLite connection
+    await connectSQLite();
     
-    const connectionTest = await supabaseService.testConnection();
-    
-    if (connectionTest) {
-      isConnected = true;
-      logger.info('Supabase PostgreSQL connected successfully');
-    } else {
-      throw new Error('Failed to connect to Supabase PostgreSQL');
-    }
+    isConnected = true;
+    logger.info('SQLite connected successfully');
   } catch (error) {
-    logger.error('Error connecting to Supabase PostgreSQL:', error);
+    logger.error('Error connecting to SQLite:', error);
     throw error;
   }
 };
 
 export const disconnectDatabase = async (): Promise<void> => {
   try {
-    // Supabase client doesn't need explicit disconnection
+    await disconnectSQLite();
     isConnected = false;
-    logger.info('Supabase disconnected successfully');
+    logger.info('SQLite disconnected successfully');
   } catch (error) {
-    logger.error('Error disconnecting from Supabase:', error);
+    logger.error('Error disconnecting from SQLite:', error);
   }
 };
 
-// Handle Supabase connection events
-export const getDatabaseStatus = (): { connected: boolean; provider: string } => {
+// Handle SQLite connection events
+export const getDatabaseStatus = (): { connected: boolean; provider: string; path?: string } => {
+  const status = getSQLiteStatus();
   return {
-    connected: isConnected,
-    provider: 'supabase'
+    connected: isConnected && status.connected,
+    provider: 'sqlite',
+    path: status.path
   };
 };
 
@@ -51,5 +47,5 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Export Supabase service for use in other modules
-export { supabaseService }; 
+// Export SQLite database for use in other modules
+export { getDatabase }; 

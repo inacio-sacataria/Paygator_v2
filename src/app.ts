@@ -170,20 +170,21 @@ class App {
 
   public async start(): Promise<void> {
     try {
-      // Conectar ao MongoDB
+      // Conectar ao SQLite
       try {
         await connectDatabase();
-        logger.info('MongoDB connected successfully');
+        logger.info('SQLite connected successfully');
       } catch (error) {
-        logger.warn('MongoDB connection failed, continuing without database', { error: error instanceof Error ? error.message : 'Unknown error' });
+        logger.warn('SQLite connection failed, continuing without database', { error: error instanceof Error ? error.message : 'Unknown error' });
       }
 
       // Iniciar servidor
-      this.app.listen(config.server.port, () => {
+      this.app.listen(config.server.port, '0.0.0.0', () => {
         logger.info('Server started successfully', {
           port: config.server.port,
           environment: config.server.nodeEnv,
-          apiVersion: config.server.apiVersion
+          apiVersion: config.server.apiVersion,
+          host: '0.0.0.0'
         });
         logger.info(`Swagger documentation available at http://localhost:${config.server.port}/api-docs`);
         logger.info(`Health check available at http://localhost:${config.server.port}/health`);
@@ -205,7 +206,7 @@ class App {
     logger.info('Received shutdown signal, starting graceful shutdown...');
 
     try {
-      // Desconectar do MongoDB
+      // Desconectar do SQLite
       await disconnectDatabase();
 
       logger.info('Graceful shutdown completed');

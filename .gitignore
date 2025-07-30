@@ -39,6 +39,12 @@ docker-compose.override.yml
 *.bak
 *.tmp
 
+# SQLite database
+data/
+*.db
+*.sqlite
+*.sqlite3
+
 # Postman environments (não a coleção)
 *.postman_environment.json
 Paygator_API_Postman_Collection.json
