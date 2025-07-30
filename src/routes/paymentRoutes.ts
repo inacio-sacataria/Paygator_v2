@@ -27,16 +27,17 @@ const createPaymentSchema = Joi.object({
       postcode: Joi.string().optional(),
       street1: Joi.string().optional(),
       street2: Joi.string().optional().allow('')
-    }).optional(),
+    }).unknown(true).optional(), // Allow unknown fields in billingAddress
     external: Joi.object({
       id: Joi.string().optional(),
       data: Joi.any().optional()
-    }).optional()
-  }).optional(),
+    }).unknown(true).optional() // Allow unknown fields in external
+  }).unknown(true).optional(), // Allow unknown fields in customer
   locale: Joi.string().optional(),
   returnUrl: Joi.string().uri().optional(),
   orderDetails: Joi.object({
     orderId: Joi.string().optional(),
+    items: Joi.array().items(Joi.object().unknown(true)).optional(), // Allow items array with any structure
     public: Joi.object({
       vendorId: Joi.string().optional(),
       vendorName: Joi.string().optional(),
@@ -45,7 +46,7 @@ const createPaymentSchema = Joi.object({
       taxTotal: Joi.number().optional(),
       serviceFeeTotal: Joi.number().optional(),
       discountTotal: Joi.number().optional().allow(null)
-    }).optional(),
+    }).unknown(true).optional(), // Allow unknown fields in public
     internal: Joi.object({
       vendorMerchant: Joi.object({
         id: Joi.string().optional(),
@@ -58,19 +59,19 @@ const createPaymentSchema = Joi.object({
           city: Joi.string().optional(),
           countryCode: Joi.string().optional().allow(null),
           zip: Joi.string().optional()
-        }).optional(),
+        }).unknown(true).optional(), // Allow unknown fields in address
         phone: Joi.string().optional(),
         email: Joi.string().email().optional(),
         active: Joi.boolean().optional(),
         data: Joi.object({
           companyData: Joi.any().optional(),
           merchantData: Joi.any().optional()
-        }).optional()
-      }).optional(),
+        }).unknown(true).optional() // Allow unknown fields in data
+      }).unknown(true).optional(), // Allow unknown fields in vendorMerchant
       vendorShare: Joi.number().optional()
-    }).optional()
-  }).optional()
-});
+    }).unknown(true).optional() // Allow unknown fields in internal
+  }).unknown(true).optional() // Allow unknown fields in orderDetails
+}).unknown(true); // Allow unknown fields at root level
 
 // Middleware de validação genérico
 const validateRequest = (schema: Joi.ObjectSchema) => {
