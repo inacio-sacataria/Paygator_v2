@@ -126,22 +126,22 @@ export class PaymentController {
         amount: paymentDataWithDefaults.amount,
         currency: paymentDataWithDefaults.currency,
         status: 'pending',
-        customer_id: paymentDataWithDefaults.customer.external.id,
+        customer_id: paymentDataWithDefaults.customer.external?.id || 'default_customer',
         metadata: JSON.stringify(paymentRecord)
       });
       
       if (dbResult) {
-        // Log do pagamento criado
-        await loggingService.logPayment({
-          paymentId: paymentDataWithDefaults.paymentId,
-          externalPaymentId: externalPaymentId,
-          action: 'created',
-          newStatus: 'pending',
-          amount: paymentDataWithDefaults.amount,
-          currency: paymentDataWithDefaults.currency,
-          customerEmail: paymentDataWithDefaults.customer.email,
-          correlationId: req.correlationId || 'unknown'
-        });
+        // Log do pagamento criado - temporariamente desabilitado (PostgreSQL -> SQLite)
+        // await loggingService.logPayment({
+        //   paymentId: paymentDataWithDefaults.paymentId,
+        //   externalPaymentId: externalPaymentId,
+        //   action: 'created',
+        //   newStatus: 'pending',
+        //   amount: paymentDataWithDefaults.amount,
+        //   currency: paymentDataWithDefaults.currency,
+        //   customerEmail: paymentDataWithDefaults.customer.email,
+        //   correlationId: req.correlationId || 'unknown'
+        // });
       } else {
         logger.warn('Failed to save payment to database, but continuing with response', {
           correlationId: req.correlationId,
