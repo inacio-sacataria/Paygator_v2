@@ -143,7 +143,13 @@ export const createPayment = async (req: Request, res: Response): Promise<void> 
       correlationId
     });
 
-    res.status(200).json(response);
+    res.status(200).json({
+      success: true,
+      ...response,
+      message: 'Payment created successfully',
+      timestamp: new Date().toISOString(),
+      correlationId: req.headers['x-correlation-id'] as string || uuidv4()
+    });
   } catch (error) {
     logger.error('Error creating payment', {
       error: error instanceof Error ? error.message : 'Unknown error',

@@ -14,7 +14,6 @@ export class PaymentController {
       if (!paymentData.amount) {
         res.status(400).json({
           success: false,
-          data: null,
           message: 'Missing required field: amount',
           errors: ['amount is required'],
           timestamp: new Date().toISOString(),
@@ -173,7 +172,7 @@ export class PaymentController {
 
       res.status(201).json({
         success: true,
-        data: response,
+        ...response,
         message: 'Payment created successfully',
         timestamp: new Date().toISOString(),
         correlation_id: req.correlationId || 'unknown'
@@ -187,7 +186,6 @@ export class PaymentController {
 
       res.status(500).json({
         success: false,
-        data: null,
         message: 'Failed to create payment',
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         timestamp: new Date().toISOString(),
@@ -203,7 +201,6 @@ export class PaymentController {
       if (!paymentId) {
         res.status(400).json({
           success: false,
-          data: null,
           message: 'Payment ID is required',
           timestamp: new Date().toISOString(),
           correlation_id: req.correlationId || 'unknown'
@@ -227,7 +224,6 @@ export class PaymentController {
         
         res.status(404).json({
           success: false,
-          data: null,
           message: 'Payment not found',
           timestamp: new Date().toISOString(),
           correlation_id: req.correlationId || 'unknown'
@@ -247,13 +243,7 @@ export class PaymentController {
         iframe_link: `https://payment-gateway.com/pay/${dbResult.payment_id}` // Placeholder
       };
 
-      res.status(200).json({
-        success: true,
-        data: paymentStatus,
-        message: 'Payment status retrieved successfully',
-        timestamp: new Date().toISOString(),
-        correlation_id: req.correlationId || 'unknown'
-      });
+      res.status(200).json(paymentStatus);
 
     } catch (error) {
       logger.error('Error getting payment status', {
@@ -264,7 +254,6 @@ export class PaymentController {
 
       res.status(500).json({
         success: false,
-        data: null,
         message: 'Failed to get payment status',
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         timestamp: new Date().toISOString(),

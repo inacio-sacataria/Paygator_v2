@@ -226,7 +226,7 @@ export class PlayfoodController {
 
       res.status(201).json({
         success: true,
-        data: payment,
+        ...payment,
         message: 'Payment created successfully',
         timestamp: new Date().toISOString(),
         correlation_id: req.correlationId || 'unknown'
@@ -240,7 +240,6 @@ export class PlayfoodController {
 
       res.status(400).json({
         success: false,
-        data: null,
         message: 'Failed to create payment',
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         timestamp: new Date().toISOString(),
@@ -268,7 +267,7 @@ export class PlayfoodController {
 
       res.status(200).json({
         success: true,
-        data: payment,
+        ...payment,
         message: 'Payment retrieved successfully',
         timestamp: new Date().toISOString(),
         correlation_id: req.correlationId || 'unknown'
@@ -283,7 +282,6 @@ export class PlayfoodController {
 
       res.status(404).json({
         success: false,
-        data: null,
         message: 'Payment not found',
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         timestamp: new Date().toISOString(),
@@ -302,12 +300,8 @@ export class PlayfoodController {
       const payments = await this.playfoodService.listPayments(page, limit, status, order_id);
 
       res.status(200).json({
-        success: true,
         data: payments.data,
-        pagination: payments.pagination,
-        message: 'Payments retrieved successfully',
-        timestamp: new Date().toISOString(),
-        correlation_id: req.correlationId || 'unknown'
+        pagination: payments.pagination
       });
 
     } catch (error) {
@@ -318,7 +312,6 @@ export class PlayfoodController {
 
       res.status(500).json({
         success: false,
-        data: null,
         message: 'Failed to retrieve payments',
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         timestamp: new Date().toISOString(),
@@ -335,7 +328,6 @@ export class PlayfoodController {
       if (!id) {
         res.status(400).json({
           success: false,
-          data: null,
           message: 'Payment ID is required',
           timestamp: new Date().toISOString(),
           correlation_id: req.correlationId || 'unknown'
@@ -347,7 +339,7 @@ export class PlayfoodController {
 
       res.status(200).json({
         success: true,
-        data: payment,
+        ...payment,
         message: 'Payment refunded successfully',
         timestamp: new Date().toISOString(),
         correlation_id: req.correlationId || 'unknown'
@@ -362,7 +354,6 @@ export class PlayfoodController {
 
       res.status(400).json({
         success: false,
-        data: null,
         message: 'Failed to refund payment',
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         timestamp: new Date().toISOString(),
@@ -387,13 +378,7 @@ export class PlayfoodController {
         event_type: webhookData.event_type || 'unknown'
       };
 
-      res.status(200).json({
-        success: true,
-        data: result,
-        message: 'PlayFood webhook processed successfully',
-        timestamp: new Date().toISOString(),
-        correlation_id: req.correlationId || 'unknown'
-      });
+      res.status(200).json(result);
 
     } catch (error) {
       logger.error('Error processing PlayFood webhook', {
@@ -403,7 +388,6 @@ export class PlayfoodController {
 
       res.status(500).json({
         success: false,
-        data: null,
         message: 'Failed to process PlayFood webhook',
         errors: [error instanceof Error ? error.message : 'Unknown error'],
         timestamp: new Date().toISOString(),

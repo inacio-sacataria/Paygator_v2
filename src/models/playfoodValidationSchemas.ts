@@ -102,7 +102,7 @@ const vendorMerchantSchema = Joi.object({
     'string.min': 'Merchant ID must be at least 1 character',
     'string.max': 'Merchant ID must be at most 100 characters'
   }),
-  externalId: Joi.string().optional().allow(null).max(100).messages({
+  externalId: Joi.string().optional().allow(null, '').max(100).messages({
     'string.max': 'External ID must be at most 100 characters'
   }),
   businessType: Joi.string().valid('INDIVIDUAL').required().messages({
@@ -393,7 +393,7 @@ export const merchantRegisterSchema = Joi.object({
     'string.min': 'Merchant ID must be at least 1 character',
     'string.max': 'Merchant ID must be at most 100 characters'
   }),
-  externalId: Joi.string().optional().allow(null).max(100).messages({
+  externalId: Joi.string().optional().allow(null, '').max(100).messages({
     'string.max': 'External ID must be at most 100 characters'
   }),
   businessType: Joi.string().valid('INDIVIDUAL').required().messages({

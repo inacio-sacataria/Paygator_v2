@@ -45,16 +45,11 @@ router.get('/logout', (req, res) => {
 router.get('/api/stats', async (req, res) => {
   try {
     const stats = await adminService.getDashboardStats();
-    res.json({
-      success: true,
-      data: stats,
-      message: 'Dashboard stats retrieved successfully'
-    });
+    res.json(stats);
   } catch (error) {
     console.error('Error loading dashboard stats:', error);
     res.status(500).json({
       success: false,
-      data: null,
       message: 'Failed to load dashboard stats'
     });
   }
@@ -81,16 +76,11 @@ router.get('/api/payments', async (req, res) => {
 
     const result = await adminService.getPayments(filter);
 
-    res.json({
-      success: true,
-      data: result,
-      message: 'Payments retrieved successfully'
-    });
+    res.json(result);
   } catch (error) {
     console.error('Error loading payments:', error);
     res.status(500).json({
       success: false,
-      data: null,
       message: 'Failed to load payments'
     });
   }
@@ -119,16 +109,11 @@ router.get('/api/logs', async (req, res) => {
 
     const result = await adminService.getApiLogs(filter);
 
-    res.json({
-      success: true,
-      data: result,
-      message: 'API logs retrieved successfully'
-    });
+    res.json(result);
   } catch (error) {
     console.error('Error loading API logs:', error);
     res.status(500).json({
       success: false,
-      data: null,
       message: 'Failed to load API logs'
     });
   }
@@ -155,16 +140,11 @@ router.get('/api/payment-logs', async (req, res) => {
 
     const result = await adminService.getPaymentLogs(filter);
 
-    res.json({
-      success: true,
-      data: result,
-      message: 'Payment logs retrieved successfully'
-    });
+    res.json(result);
   } catch (error) {
     console.error('Error loading payment logs:', error);
     res.status(500).json({
       success: false,
-      data: null,
       message: 'Failed to load payment logs'
     });
   }
@@ -175,16 +155,11 @@ router.get('/api/log-stats', async (req, res) => {
   try {
     const stats = await adminService.getLogStats();
 
-    res.json({
-      success: true,
-      data: stats,
-      message: 'Log statistics retrieved successfully'
-    });
+    res.json(stats);
   } catch (error) {
     console.error('Error loading log stats:', error);
     res.status(500).json({
       success: false,
-      data: null,
       message: 'Failed to load log statistics'
     });
   }
