@@ -109,8 +109,7 @@ const vendorMerchantSchema = Joi.object({
     'any.only': 'Business type must be INDIVIDUAL',
     'string.empty': 'Business type is required'
   }),
-  taxId: Joi.string().required().min(5).max(50).pattern(/^[0-9\-\.]+$/).messages({
-    'string.empty': 'Tax ID is required',
+  taxId: Joi.string().optional().allow(null, '').min(5).max(50).pattern(/^[0-9\-\.]+$/).messages({
     'string.min': 'Tax ID must be at least 5 characters',
     'string.max': 'Tax ID must be at most 50 characters',
     'string.pattern.base': 'Invalid tax ID format'
@@ -400,8 +399,7 @@ export const merchantRegisterSchema = Joi.object({
     'any.only': 'Business type must be INDIVIDUAL',
     'string.empty': 'Business type is required'
   }),
-  taxId: Joi.string().required().min(5).max(50).pattern(/^[0-9\-\.]+$/).messages({
-    'string.empty': 'Tax ID is required',
+  taxId: Joi.string().optional().allow(null, '').min(5).max(50).pattern(/^[0-9\-\.]+$/).messages({
     'string.min': 'Tax ID must be at least 5 characters',
     'string.max': 'Tax ID must be at most 50 characters',
     'string.pattern.base': 'Invalid tax ID format'
