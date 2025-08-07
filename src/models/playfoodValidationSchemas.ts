@@ -78,7 +78,18 @@ const merchantAddressSchema = Joi.object({
     'string.min': 'City must be at least 1 character',
     'string.max': 'City must be at most 100 characters'
   }),
-  countryCode: Joi.string().optional().allow(null).min(2).max(3).messages({
+  countryCode: Joi.string().optional().allow(null, '').custom((value, helpers) => {
+    if (value === undefined || value === null || value === '') {
+      return value;
+    }
+    if (value.length < 2) {
+      return helpers.error('string.min');
+    }
+    if (value.length > 3) {
+      return helpers.error('string.max');
+    }
+    return value;
+  }).messages({
     'string.min': 'Country code must be at least 2 characters',
     'string.max': 'Country code must be at most 3 characters'
   }),
@@ -109,7 +120,21 @@ const vendorMerchantSchema = Joi.object({
     'any.only': 'Business type must be INDIVIDUAL',
     'string.empty': 'Business type is required'
   }),
-  taxId: Joi.string().optional().allow(null, '').min(5).max(50).pattern(/^[0-9\-\.]+$/).messages({
+  taxId: Joi.string().optional().allow(null, '').custom((value, helpers) => {
+    if (value === undefined || value === null || value === '') {
+      return value;
+    }
+    if (value.length < 5) {
+      return helpers.error('string.min');
+    }
+    if (value.length > 50) {
+      return helpers.error('string.max');
+    }
+    if (!/^[0-9\-\.]+$/.test(value)) {
+      return helpers.error('string.pattern.base');
+    }
+    return value;
+  }).messages({
     'string.min': 'Tax ID must be at least 5 characters',
     'string.max': 'Tax ID must be at most 50 characters',
     'string.pattern.base': 'Invalid tax ID format'
@@ -399,7 +424,21 @@ export const merchantRegisterSchema = Joi.object({
     'any.only': 'Business type must be INDIVIDUAL',
     'string.empty': 'Business type is required'
   }),
-  taxId: Joi.string().optional().allow(null, '').min(5).max(50).pattern(/^[0-9\-\.]+$/).messages({
+  taxId: Joi.string().optional().allow(null, '').custom((value, helpers) => {
+    if (value === undefined || value === null || value === '') {
+      return value;
+    }
+    if (value.length < 5) {
+      return helpers.error('string.min');
+    }
+    if (value.length > 50) {
+      return helpers.error('string.max');
+    }
+    if (!/^[0-9\-\.]+$/.test(value)) {
+      return helpers.error('string.pattern.base');
+    }
+    return value;
+  }).messages({
     'string.min': 'Tax ID must be at least 5 characters',
     'string.max': 'Tax ID must be at most 50 characters',
     'string.pattern.base': 'Invalid tax ID format'
