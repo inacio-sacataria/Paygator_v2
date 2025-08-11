@@ -1,5 +1,5 @@
 import { connectSQLite, disconnectSQLite, getSQLiteStatus, getDatabase } from './sqlite';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/logger';
 
 let isConnected = false;
 

@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { CreatePaymentRequest, CreatePaymentResponse } from '../types/payment';
-import { logger } from '../utils/logger.js';
-import { loggingService } from '../services/loggingService.js';
-import { AuthenticatedRequest } from '../middleware/logging.js';
-import { sqliteService } from '../services/sqliteService.js';
+import { logger } from '../utils/logger';
+import { loggingService } from '../services/loggingService';
+import { AuthenticatedRequest } from '../middleware/logging';
+import { sqliteService } from '../services/sqliteService';
 
 export class PaymentController {
   public createPayment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

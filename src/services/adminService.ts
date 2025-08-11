@@ -1,6 +1,6 @@
-import { sqliteService } from './sqliteService.js';
-import { loggingService } from './loggingService.js';
-import { logger } from '../utils/logger.js';
+import { sqliteService } from './sqliteService';
+import { loggingService } from './loggingService';
+import { logger } from '../utils/logger';
 
 export interface DashboardStats {
   totalPayments: number;

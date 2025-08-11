@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Client } from 'pg';
-import { config } from './environment.js';
-import { logger } from '../utils/logger.js';
+import { config } from './environment';
+import { logger } from '../utils/logger';
 
 // Create Supabase client
 export const supabase = createClient(

@@ -116,13 +116,13 @@ const vendorMerchantSchema = Joi.object({
   externalId: Joi.string().optional().allow(null, '').max(100).messages({
     'string.max': 'External ID must be at most 100 characters'
   }),
-  businessType: Joi.string().valid('INDIVIDUAL').required().messages({
-    'any.only': 'Business type must be INDIVIDUAL',
+  businessType: Joi.string().valid('INDIVIDUAL', 'COMPANY').required().messages({
+    'any.only': 'Business type must be INDIVIDUAL or COMPANY',
     'string.empty': 'Business type is required'
   }),
   taxId: Joi.string().optional().allow(null, '').custom((value, helpers) => {
     if (value === undefined || value === null || value === '') {
-      return value;
+      return undefined; // Return undefined for empty values to make them truly optional
     }
     if (value.length < 5) {
       return helpers.error('string.min');
@@ -420,22 +420,19 @@ export const merchantRegisterSchema = Joi.object({
   externalId: Joi.string().optional().allow(null, '').max(100).messages({
     'string.max': 'External ID must be at most 100 characters'
   }),
-  businessType: Joi.string().valid('INDIVIDUAL').required().messages({
-    'any.only': 'Business type must be INDIVIDUAL',
+  businessType: Joi.string().valid('INDIVIDUAL', 'COMPANY').required().messages({
+    'any.only': 'Business type must be INDIVIDUAL or COMPANY',
     'string.empty': 'Business type is required'
   }),
   taxId: Joi.string().optional().allow(null, '').custom((value, helpers) => {
     if (value === undefined || value === null || value === '') {
-      return value;
+      return undefined; // Return undefined for empty values to make them truly optional
     }
     if (value.length < 5) {
       return helpers.error('string.min');
     }
     if (value.length > 50) {
       return helpers.error('string.max');
-    }
-    if (!/^[0-9\-\.]+$/.test(value)) {
-      return helpers.error('string.pattern.base');
     }
     return value;
   }).messages({

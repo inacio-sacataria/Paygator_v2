@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '../utils/logger.js';
-import { loggingService } from '../services/loggingService.js';
+import { logger } from '../utils/logger';
+import { loggingService } from '../services/loggingService';
 
 export interface AuthenticatedRequest extends Request {
   apiKey?: string;

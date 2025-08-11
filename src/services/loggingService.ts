@@ -1,5 +1,5 @@
 import { pgClient } from '../config/supabase';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/logger';
 
 export interface ApiLogData {
   correlationId: string;

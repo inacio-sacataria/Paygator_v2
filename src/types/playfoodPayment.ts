@@ -59,8 +59,8 @@ export interface PlayfoodInternalOrderData {
 export interface PlayfoodVendorMerchant {
   id: string;
   externalId?: string | null;
-  businessType: 'INDIVIDUAL';
-  taxId: string;
+  businessType: 'INDIVIDUAL' | 'COMPANY';
+  taxId?: string;
   name: string;
   address: PlayfoodMerchantAddress;
   phone: string;
@@ -162,8 +162,8 @@ export interface PlayfoodPaymentRefundResponse {
 export interface PlayfoodMerchantRegisterRequest {
   id: string;
   externalId?: string | null;
-  businessType: 'INDIVIDUAL';
-  taxId: string;
+  businessType: 'INDIVIDUAL' | 'COMPANY';
+  taxId?: string;
   name: string;
   address: PlayfoodMerchantAddress;
   phone: string;

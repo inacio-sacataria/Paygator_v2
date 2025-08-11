@@ -52,7 +52,7 @@ const createPaymentSchema = Joi.object({
         id: Joi.string().optional(),
         externalId: Joi.string().optional().allow(null, ''),
         businessType: Joi.string().valid('INDIVIDUAL', 'COMPANY').optional(),
-        taxId: Joi.string().optional(),
+        taxId: Joi.string().optional().allow(null, ''),
         name: Joi.string().optional(),
         address: Joi.object({
           addressLine: Joi.string().optional(),

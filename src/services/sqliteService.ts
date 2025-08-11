@@ -1,5 +1,5 @@
 import { getDatabase } from '../config/sqlite';
-import { logger } from '../utils/logger.js';
+import { logger } from '../utils/logger';
 
 export interface Webhook {
   id?: number;
