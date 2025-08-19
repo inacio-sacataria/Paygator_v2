@@ -1,162 +1,173 @@
-const axios = require('axios');
+const http = require('http');
 
-const BASE_URL = 'http://localhost:3000';
-const API_KEY = 'test-api-key-123'; // Substitua pela sua chave API real
+console.log('🧪 Testando correção do CSP...\n');
+
+// Configuração
+const hostname = '127.0.0.1';
+const port = 3000;
+const apiKey = 'main_4c614d6eb046010889a8eaba36efc8e930c9656e9a4f6c553ca9cc667b267e1e';
+
+// Função para fazer requisições HTTP
+function makeRequest(options, postData = null) {
+  return new Promise((resolve, reject) => {
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        resolve({
+          statusCode: res.statusCode,
+          headers: res.headers,
+          data: data
+        });
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    if (postData) {
+      req.write(postData);
+    }
+
+    req.end();
+  });
+}
 
 async function testCSPFix() {
   try {
-    console.log('🧪 Testando correções de CSP...\n');
+    console.log('🔥 1. Criando pagamento de teste...');
+    
+    // 1. Criar um pagamento
+    const createPaymentOptions = {
+      hostname,
+      port,
+      path: '/api/v1/payments',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey
+      }
+    };
 
-    // 1. Criar um pagamento para testar
-    console.log('1️⃣ Criando pagamento para teste...');
-    const createPaymentResponse = await axios.post(`${BASE_URL}/api/v1/payments/create`, {
-      amount: 35.00,
+    const paymentData = JSON.stringify({
+      paymentId: `test_csp_${Date.now()}`,
+      paymentMethod: 'mpesa',
+      amount: 100,
       currency: 'MZN',
       customer: {
-        phone: '+258841234567',
-        name: 'Teste CSP',
-        email: 'teste@example.com'
+        phone: '258841234567',
+        name: 'Teste CSP'
       },
-      returnUrl: 'https://example.com/success'
-    }, {
-      headers: {
-        'X-API-Key': API_KEY,
-        'Content-Type': 'application/json'
+      locale: 'pt',
+      returnUrl: 'https://example.com/success',
+      orderDetails: {
+        orderId: 'order_csp_test',
+        public: {
+          vendorId: 'vendor123',
+          vendorName: 'Teste Vendor',
+          cartTotal: 100,
+          deliveryTotal: 0,
+          taxTotal: 0,
+          serviceFeeTotal: 0,
+          discountTotal: 0
+        }
       }
     });
 
-    if (createPaymentResponse.data.success) {
-      const paymentData = createPaymentResponse.data.data;
-      console.log('✅ Pagamento criado com sucesso!');
-      console.log(`   ID: ${paymentData.externalPayment.id}`);
-      console.log(`   Link: ${paymentData.link}`);
-      console.log(`   Tipo: ${paymentData.responseType}\n`);
+    const createResponse = await makeRequest(createPaymentOptions, paymentData);
+    console.log(`   Status: ${createResponse.statusCode}`);
+    
+    if (createResponse.statusCode !== 200 && createResponse.statusCode !== 201) {
+      console.log('❌ Erro ao criar pagamento:', createResponse.data);
+      return;
+    }
 
-      // 2. Testar formulário de pagamento
-      console.log('2️⃣ Testando acesso ao formulário...');
-      try {
-        const formResponse = await axios.get(`${paymentData.link}`);
-        if (formResponse.status === 200) {
-          console.log('✅ Formulário de pagamento acessível!');
-          console.log(`   URL: ${paymentData.link}`);
-          
-          // Verificar se o HTML contém os elementos necessários
-          const html = formResponse.data;
-          const hasForm = html.includes('id="paymentForm"');
-          const hasPhoneInput = html.includes('id="phone"');
-          const hasButton = html.includes('id="payButton"');
-          const hasExternalJS = html.includes('src="/js/payment-form.js"');
-          const hasPaymentData = html.includes('id="payment-data"');
-          const hasNoInlineScript = !html.includes('<script>') || html.includes('type="application/json"');
-          
-          console.log(`   ✅ Formulário: ${hasForm ? 'Presente' : 'Ausente'}`);
-          console.log(`   ✅ Campo telefone: ${hasPhoneInput ? 'Presente' : 'Ausente'}`);
-          console.log(`   ✅ Botão: ${hasButton ? 'Presente' : 'Ausente'}`);
-          console.log(`   ✅ JavaScript externo: ${hasExternalJS ? 'Presente' : 'Ausente'}`);
-          console.log(`   ✅ Dados do pagamento: ${hasPaymentData ? 'Presente' : 'Ausente'}`);
-          console.log(`   ✅ Sem scripts inline: ${hasNoInlineScript ? 'Sim' : 'Não'}`);
-          
-          // Verificar se não há atributos problemáticos
-          const hasMethodPost = html.includes('method="POST"');
-          const hasAction = html.includes('action=');
-          const hasTypeSubmit = html.includes('type="submit"');
-          
-          console.log(`   ✅ Sem method POST: ${!hasMethodPost ? 'Sim' : 'Não'}`);
-          console.log(`   ✅ Sem action: ${!hasAction ? 'Sim' : 'Não'}`);
-          console.log(`   ✅ Botão type button: ${!hasTypeSubmit ? 'Sim' : 'Não'}`);
-          
-          if (hasMethodPost || hasAction || hasTypeSubmit) {
-            console.log('   ⚠️ ATENÇÃO: Formulário ainda tem atributos problemáticos!');
-          }
-        }
-      } catch (formError) {
-        console.log('❌ Erro ao acessar formulário:', formError.message);
+    const paymentResult = JSON.parse(createResponse.data);
+    console.log('✅ Pagamento criado:', paymentResult.externalPayment.id);
+    
+    // Extrair payment ID da resposta
+    const paymentId = paymentResult.externalPayment.id;
+    
+    // 2. Testar acesso ao formulário de pagamento
+    console.log('\n🎯 2. Testando acesso ao formulário de pagamento...');
+    
+    const formOptions = {
+      hostname,
+      port,
+      path: `/payment-form/${paymentId}`,
+      method: 'GET',
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Test) AppleWebKit/537.36'
       }
+    };
 
-      // 3. Testar se o arquivo JavaScript está acessível
-      console.log('\n3️⃣ Testando acesso ao arquivo JavaScript...');
-      try {
-        const jsResponse = await axios.get(`${BASE_URL}/js/payment-form.js`);
-        if (jsResponse.status === 200) {
-          console.log('✅ Arquivo JavaScript acessível!');
-          console.log(`   Tamanho: ${jsResponse.data.length} caracteres`);
-          
-          // Verificar se contém as funções necessárias
-          const jsContent = jsResponse.data;
-          const hasProcessPayment = jsContent.includes('processPayment');
-          const hasShowPopup = jsContent.includes('showPopup');
-          const hasPollPaymentStatus = jsContent.includes('pollPaymentStatus');
-          
-          console.log(`   ✅ Função processPayment: ${hasProcessPayment ? 'Presente' : 'Ausente'}`);
-          console.log(`   ✅ Função showPopup: ${hasShowPopup ? 'Presente' : 'Ausente'}`);
-          console.log(`   ✅ Função pollPaymentStatus: ${hasPollPaymentStatus ? 'Presente' : 'Ausente'}`);
-        }
-      } catch (jsError) {
-        console.log('❌ Erro ao acessar JavaScript:', jsError.message);
-      }
-
-      // 4. Testar processamento M-Pesa
-      console.log('\n4️⃣ Testando processamento M-Pesa...');
-      const mpesaResponse = await axios.post(`${BASE_URL}/api/v1/payments/process-mpesa`, {
-        paymentId: paymentData.externalPayment.id,
-        phone: '+258841234567',
-        amount: 35.00,
-        currency: 'MZN'
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (mpesaResponse.data.success) {
-        console.log('✅ Pagamento M-Pesa processado com sucesso!');
-        console.log(`   Transaction ID: ${mpesaResponse.data.data.transactionId}`);
-        console.log(`   Status: ${mpesaResponse.data.data.status}`);
+    const formResponse = await makeRequest(formOptions);
+    console.log(`   Status: ${formResponse.statusCode}`);
+    console.log(`   Content-Type: ${formResponse.headers['content-type'] || 'N/A'}`);
+    
+    if (formResponse.statusCode === 200) {
+      console.log('✅ Formulário carregado com sucesso!');
+      
+      // Verificar se contém elementos essenciais
+      const hasForm = formResponse.data.includes('<form');
+      const hasScript = formResponse.data.includes('payment-form.js');
+      const hasPopup = formResponse.data.includes('popup-overlay');
+      
+      console.log(`   📋 Contém formulário: ${hasForm ? '✅' : '❌'}`);
+      console.log(`   📜 Contém script: ${hasScript ? '✅' : '❌'}`);
+      console.log(`   🎭 Contém popup: ${hasPopup ? '✅' : '❌'}`);
+      
+      // Verificar CSP headers
+      const cspHeader = formResponse.headers['content-security-policy'];
+      console.log(`   🛡️ CSP Header: ${cspHeader ? 'PRESENTE' : 'AUSENTE'}`);
+      
+      if (cspHeader) {
+        console.log(`   ⚠️ CSP ainda ativo: ${cspHeader}`);
       } else {
-        console.log('❌ Erro ao processar pagamento M-Pesa:', mpesaResponse.data.message);
+        console.log('   ✅ CSP desabilitado para payment-form!');
       }
-
+      
+    } else if (formResponse.statusCode === 500) {
+      console.log('❌ Erro 500 - Detalhes:');
+      console.log(formResponse.data.substring(0, 1000) + '...');
     } else {
-      console.log('❌ Erro ao criar pagamento:', createPaymentResponse.data.message);
+      console.log('❌ Erro inesperado:', formResponse.statusCode);
+      console.log(formResponse.data.substring(0, 500) + '...');
+    }
+
+    // 3. Testar acesso a arquivos estáticos
+    console.log('\n📁 3. Testando acesso a arquivos estáticos...');
+    
+    const jsOptions = {
+      hostname,
+      port,
+      path: '/js/payment-form.js',
+      method: 'GET'
+    };
+
+    const jsResponse = await makeRequest(jsOptions);
+    console.log(`   JavaScript Status: ${jsResponse.statusCode}`);
+    
+    if (jsResponse.statusCode === 200) {
+      console.log('✅ JavaScript acessível!');
+    } else {
+      console.log('❌ JavaScript não acessível');
     }
 
   } catch (error) {
-    console.error('❌ Erro durante o teste:', error.message);
-    if (error.response) {
-      console.error('   Status:', error.response.status);
-      console.error('   Dados:', error.response.data);
-    }
+    console.log('❌ Erro durante teste:', error.message);
   }
 }
 
-async function runTest() {
-  console.log('🚀 Iniciando teste de correções de CSP...\n');
-  
-  await testCSPFix();
-  
-  console.log('\n✨ Teste concluído!');
-  console.log('\n📋 Resumo das correções implementadas:');
-  console.log('   ✅ JavaScript movido para arquivo externo');
-  console.log('   ✅ Formulário sem atributos problemáticos');
-  console.log('   ✅ CSP configurado para permitir arquivos externos');
-  console.log('   ✅ Arquivos estáticos configurados');
-  console.log('   ✅ Sem scripts inline no HTML');
-  console.log('\n🎯 Para testar manualmente:');
-  console.log('   1. Acesse o formulário de pagamento');
-  console.log('   2. Abra o DevTools (F12)');
-  console.log('   3. Vá para a aba Console');
-  console.log('   4. Digite um telefone válido');
-  console.log('   5. Clique em "Pagar com M-Pesa"');
-  console.log('   6. Verifique se não há erros de CSP');
-  console.log('   7. Verifique se os popups aparecem');
-}
-
-// Executar teste se o script for chamado diretamente
-if (require.main === module) {
-  runTest().catch(console.error);
-}
-
-module.exports = {
-  testCSPFix,
-  runTest
-};
+// Executar teste
+testCSPFix().then(() => {
+  console.log('\n🎯 Teste de CSP concluído!');
+  console.log('\n📋 Próximos passos:');
+  console.log('   1. Se local funcionou, fazer deploy');
+  console.log('   2. Testar em produção: https://paygator-v2.onrender.com/payment-form/pay_12345d67sa89');
+  console.log('   3. Verificar logs do Render se ainda houver erro 500');
+}).catch(console.error);

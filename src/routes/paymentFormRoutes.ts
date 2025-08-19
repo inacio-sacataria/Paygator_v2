@@ -5,6 +5,23 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 
+// Middleware de debug para payment-form
+router.use((req, res, next) => {
+  logger.info('Payment form route accessed', {
+    method: req.method,
+    path: req.path,
+    params: req.params,
+    query: req.query,
+    headers: {
+      'user-agent': req.get('User-Agent'),
+      'accept': req.get('Accept'),
+      'content-type': req.get('Content-Type')
+    },
+    ip: req.ip
+  });
+  next();
+});
+
 // Rota para exibir o formulário de pagamento
 router.get('/:paymentId', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -164,16 +181,67 @@ router.get('/:paymentId', async (req: Request, res: Response): Promise<void> => 
   } catch (error) {
     logger.error('Error displaying payment form', {
       paymentId: req.params['paymentId'],
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      nodeEnv: process.env['NODE_ENV']
     });
 
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: 'An unexpected error occurred while displaying the payment form',
-      timestamp: new Date().toISOString(),
-      correlation_id: req.headers['x-correlation-id'] || 'unknown'
-    });
+    // Em produção, mostrar erro detalhado para debug
+    if (process.env['NODE_ENV'] === 'production') {
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Erro 500 - Debug</title>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .error { background: #ffebee; border: 1px solid #f44336; padding: 20px; border-radius: 4px; }
+            .details { background: #f5f5f5; padding: 15px; margin-top: 15px; border-radius: 4px; }
+            pre { white-space: pre-wrap; word-wrap: break-word; }
+          </style>
+        </head>
+        <body>
+          <div class="error">
+            <h1>🚨 Erro 500 - Internal Server Error</h1>
+            <p><strong>Payment ID:</strong> ${req.params['paymentId'] || 'N/A'}</p>
+            <p><strong>Path:</strong> ${req.path}</p>
+            <p><strong>Method:</strong> ${req.method}</p>
+            <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+            
+            <div class="details">
+              <h3>Detalhes do Erro:</h3>
+              <pre>${error instanceof Error ? error.message : 'Unknown error'}</pre>
+              ${error instanceof Error && error.stack ? `
+              <h3>Stack Trace:</h3>
+              <pre>${error.stack}</pre>
+              ` : ''}
+            </div>
+            
+            <div class="details">
+              <h3>Environment:</h3>
+              <p><strong>NODE_ENV:</strong> ${process.env['NODE_ENV'] || 'undefined'}</p>
+              <p><strong>BASE_URL:</strong> ${process.env['BASE_URL'] || 'undefined'}</p>
+              <p><strong>PORT:</strong> ${process.env['PORT'] || 'undefined'}</p>
+            </div>
+            
+            <div class="details">
+              <h3>Headers:</h3>
+              <pre>${JSON.stringify(req.headers, null, 2)}</pre>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: 'An unexpected error occurred while displaying the payment form',
+        timestamp: new Date().toISOString(),
+        correlation_id: req.headers['x-correlation-id'] || 'unknown'
+      });
+    }
   }
 });
 

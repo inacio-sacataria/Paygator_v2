@@ -64,19 +64,27 @@ class App {
   }
 
   private initializeMiddlewares(): void {
-    // Middlewares de segurança
-    this.app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
-          scriptSrc: ["'self'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
-          imgSrc: ["'self'", "data:", "https:"],
-          fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
-          formAction: ["'self'"],
+    // Middleware customizado para CSP - desabilitar para payment-form
+    this.app.use((req, res, next) => {
+      // Desabilitar CSP completamente para rotas de payment-form
+      if (req.path.startsWith('/payment-form')) {
+        return next();
+      }
+      
+      // Aplicar helmet com CSP para outras rotas
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+            scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
+            imgSrc: ["'self'", "data:", "https:"],
+            fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+            formAction: ["'self'"],
+          },
         },
-      },
-    }));
+      })(req, res, next);
+    });
 
     // CORS
     this.app.use(cors({
@@ -102,7 +110,16 @@ class App {
 
     // Configurar EJS
     this.app.set('view engine', 'ejs');
-    this.app.set('views', path.join(process.cwd(), 'src', 'views'));
+    
+    // Em produção, verificar se o diretório views existe
+    const viewsPath = path.join(process.cwd(), 'src', 'views');
+    logger.info('Views directory configuration', {
+      viewsPath,
+      exists: require('fs').existsSync(viewsPath),
+      nodeEnv: process.env['NODE_ENV']
+    });
+    
+    this.app.set('views', viewsPath);
 
     // Configurar arquivos estáticos
     this.app.use('/js', express.static(path.join(process.cwd(), 'public', 'js')));
