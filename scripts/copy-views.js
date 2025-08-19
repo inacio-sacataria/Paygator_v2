@@ -9,6 +9,10 @@ const distViewsDir = path.join(process.cwd(), 'dist', 'src', 'views');
 const publicDir = path.join(process.cwd(), 'public');
 const distPublicDir = path.join(process.cwd(), 'dist', 'public');
 
+// EM PRODUÇÃO: O Express está procurando em /app/src/views
+// Vamos copiar para lá também!
+const productionViewsDir = path.join(process.cwd(), 'src', 'views');
+
 // Função para copiar diretório recursivamente
 function copyDirectory(src, dest) {
   if (!fs.existsSync(dest)) {
@@ -39,9 +43,9 @@ function ensureDirectoryExists(dir) {
 }
 
 try {
-  // 1. Copiar views
+  // 1. Copiar views para dist (para desenvolvimento)
   if (fs.existsSync(srcViewsDir)) {
-    console.log('📋 Copiando views...');
+    console.log('📋 Copiando views para dist...');
     ensureDirectoryExists(distViewsDir);
     copyDirectory(srcViewsDir, distViewsDir);
     console.log(`   ✅ Views copiadas para: ${distViewsDir}\n`);
@@ -49,7 +53,20 @@ try {
     console.log(`   ❌ Diretório de views não encontrado: ${srcViewsDir}\n`);
   }
 
-  // 2. Copiar arquivos públicos
+  // 2. EM PRODUÇÃO: Garantir que src/views existe (onde o Express procura)
+  console.log('🏭 Garantindo que src/views existe para produção...');
+  if (!fs.existsSync(productionViewsDir)) {
+    fs.mkdirSync(productionViewsDir, { recursive: true });
+    console.log(`   📁 Criado diretório: ${productionViewsDir}`);
+  }
+  
+  // Copiar views para src/views também (para produção)
+  if (fs.existsSync(srcViewsDir)) {
+    copyDirectory(srcViewsDir, productionViewsDir);
+    console.log(`   ✅ Views copiadas para: ${productionViewsDir}\n`);
+  }
+
+  // 3. Copiar arquivos públicos
   if (fs.existsSync(publicDir)) {
     console.log('📁 Copiando arquivos públicos...');
     ensureDirectoryExists(distPublicDir);
@@ -59,7 +76,7 @@ try {
     console.log(`   ❌ Diretório público não encontrado: ${publicDir}\n`);
   }
 
-  // 3. Verificar estrutura final
+  // 4. Verificar estrutura final
   console.log('🔍 Verificando estrutura do build...');
   
   if (fs.existsSync(distViewsDir)) {
