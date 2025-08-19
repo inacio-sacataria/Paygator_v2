@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { loggingService } from '../services/loggingService';
 import { AuthenticatedRequest } from '../middleware/logging';
 import { sqliteService } from '../services/sqliteService';
+import { config } from '../config/environment';
 
 export class PaymentController {
   public createPayment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -98,8 +99,8 @@ export class PaymentController {
        // Simular processamento do pagamento
       const externalPaymentId = `ext_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Gerar link do iframe (simulado)
-      const iframeLink = `https://payment-gateway.com/pay/${externalPaymentId}?amount=${paymentDataWithDefaults.amount}&currency=${paymentDataWithDefaults.currency}`;
+      // Gerar link interno para o formulário de pagamento
+      const internalPaymentLink = `${config.server.baseUrl}/payment-form/${paymentDataWithDefaults.paymentId}`;
 
       // Salvar pagamento no Supabase
       const paymentRecord = {
@@ -116,7 +117,7 @@ export class PaymentController {
         updated_at: new Date().toISOString(),
         order_id: paymentDataWithDefaults.orderDetails.orderId,
         return_url: paymentDataWithDefaults.returnUrl,
-        iframe_link: iframeLink
+        iframe_link: internalPaymentLink
       };
 
       const dbResult = await sqliteService.createPayment({
@@ -159,8 +160,8 @@ export class PaymentController {
             currency: paymentDataWithDefaults.currency
           }
         },
-        responseType: 'IFRAME',
-        link: iframeLink
+        responseType: 'INTERNAL_FORM',
+        link: internalPaymentLink
       };
 
       logger.info('Payment created successfully', {

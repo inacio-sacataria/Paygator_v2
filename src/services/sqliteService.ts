@@ -119,11 +119,36 @@ export class SQLiteService {
   // Payment operations
   async createPayment(payment: Payment): Promise<number> {
     const db = getDatabase();
-    const result = await db.run(
-      'INSERT INTO payments (payment_id, provider, amount, currency, status, customer_id, vendor_id, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [payment.payment_id, payment.provider, payment.amount, payment.currency || 'BRL', payment.status, payment.customer_id, payment.vendor_id, payment.metadata]
-    );
-    return result.lastID!;
+    try {
+      const query = 'INSERT INTO payments (payment_id, provider, amount, currency, status, customer_id, vendor_id, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+      const values = [payment.payment_id, payment.provider, payment.amount, payment.currency || 'MZN', payment.status, payment.customer_id, payment.vendor_id, payment.metadata];
+      
+      logger.info('Creating payment', {
+        paymentId: payment.payment_id,
+        provider: payment.provider,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        query,
+        values
+      });
+      
+      const result = await db.run(query, values);
+      
+      logger.info('Payment created successfully', {
+        paymentId: payment.payment_id,
+        lastID: result.lastID
+      });
+      
+      return result.lastID!;
+    } catch (error) {
+      logger.error('Error creating payment', {
+        paymentId: payment.payment_id,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        payment
+      });
+      throw error;
+    }
   }
 
   async getPayments(limit: number = 100, offset: number = 0): Promise<Payment[]> {
@@ -136,8 +161,23 @@ export class SQLiteService {
 
   async getPaymentById(paymentId: string): Promise<Payment | null> {
     const db = getDatabase();
-    const result = await db.get('SELECT * FROM payments WHERE payment_id = ?', [paymentId]);
-    return result || null;
+    try {
+      const result = await db.get('SELECT * FROM payments WHERE payment_id = ?', [paymentId]);
+      
+      logger.info('Payment retrieved by ID', {
+        paymentId,
+        found: !!result,
+        fields: result ? Object.keys(result) : []
+      });
+      
+      return result || null;
+    } catch (error) {
+      logger.error('Error getting payment by ID', {
+        paymentId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
+    }
   }
 
   async updatePayment(paymentId: string, payment: Partial<Payment>): Promise<void> {
@@ -147,11 +187,31 @@ export class SQLiteService {
     
     if (fields.length === 0) return;
     
-    const setClause = fields.map(field => `${field} = ?`).join(', ');
-    await db.run(
-      `UPDATE payments SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE payment_id = ?`,
-      [...values, paymentId]
-    );
+    try {
+      const setClause = fields.map(field => `${field} = ?`).join(', ');
+      const query = `UPDATE payments SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE payment_id = ?`;
+      
+      logger.info('Updating payment', {
+        paymentId,
+        fields,
+        query
+      });
+      
+      await db.run(query, [...values, paymentId]);
+      
+      logger.info('Payment updated successfully', {
+        paymentId,
+        fieldsUpdated: fields
+      });
+    } catch (error) {
+      logger.error('Error updating payment', {
+        paymentId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        fields,
+        values
+      });
+      throw error;
+    }
   }
 
   async getPaymentsByProvider(provider: string, limit: number = 100): Promise<Payment[]> {

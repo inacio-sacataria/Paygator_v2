@@ -7,6 +7,7 @@ export const config = {
     port: parseInt(process.env['PORT'] || '3000', 10),
     nodeEnv: process.env['NODE_ENV'] || 'development',
     apiVersion: process.env['API_VERSION'] || 'v1',
+    baseUrl: process.env['BASE_URL'] || `http://localhost:${parseInt(process.env['PORT'] || '3000', 10)}`,
   },
   security: {
     webhookSecret: process.env['WEBHOOK_SECRET'] || '1a02aa5907a7bc447b392f07548cf2a0f7713be742787327e4c4302c6960ee24',

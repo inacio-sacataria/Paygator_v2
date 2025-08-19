@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { PaymentController } from '../controllers/paymentController';
+import { MpesaController } from '../controllers/mpesaController';
 import { authenticateApiKey } from '../middleware/authentication';
 import { logger } from '../utils/logger';
 import Joi from 'joi';
@@ -7,6 +8,7 @@ import { AuthenticatedRequest } from '../middleware/logging';
 
 const router = Router();
 const paymentController = new PaymentController();
+const mpesaController = new MpesaController();
 
 // Schema de validação para criar pagamento - apenas amount é obrigatório
 const createPaymentSchema = Joi.object({
@@ -50,9 +52,9 @@ const createPaymentSchema = Joi.object({
     internal: Joi.object({
       vendorMerchant: Joi.object({
         id: Joi.string().optional(),
-        externalId: Joi.string().optional().allow(null, ''),
+        externalId: Joi.any().optional(),
         businessType: Joi.string().valid('INDIVIDUAL', 'COMPANY').optional(),
-        taxId: Joi.string().optional().allow(null, ''),
+        taxId: Joi.any().optional(),
         name: Joi.string().optional(),
         address: Joi.object({
           addressLine: Joi.string().optional(),
@@ -244,6 +246,121 @@ router.post('/create',
 router.get('/:paymentId/status',
   authenticateApiKey,
   paymentController.getPaymentStatus
+);
+
+/**
+ * @swagger
+ * /api/v1/payments/{paymentId}/public-status:
+ *   get:
+ *     summary: Get payment status (Public)
+ *     description: Retrieves the current status of a payment (no authentication required)
+ *     tags: [Payments]
+ *     parameters:
+ *       - in: path
+ *         name: paymentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment ID
+ *     responses:
+ *       200:
+ *         description: Payment status retrieved successfully
+ *       400:
+ *         description: Bad request - missing payment ID
+ *       404:
+ *         description: Payment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:paymentId/public-status',
+  paymentController.getPaymentStatus
+);
+
+/**
+ * @swagger
+ * /api/v1/payments/process-mpesa:
+ *   post:
+ *     summary: Process M-Pesa payment
+ *     description: Processes a payment using M-Pesa mobile money
+ *     tags: [Payments, M-Pesa]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentId
+ *               - phone
+ *               - amount
+ *               - currency
+ *             properties:
+ *               paymentId:
+ *                 type: string
+ *                 description: Payment ID
+ *               phone:
+ *                 type: string
+ *                 description: Phone number in format +258XXXXXXXXX
+ *               amount:
+ *                 type: number
+ *                 description: Payment amount
+ *               currency:
+ *                 type: string
+ *                 description: Payment currency
+ *     responses:
+ *       200:
+ *         description: M-Pesa payment processed successfully
+ *       400:
+ *         description: Bad request - validation error
+ *       404:
+ *         description: Payment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/process-mpesa',
+  mpesaController.processMpesaPayment
+);
+
+/**
+ * @swagger
+ * /api/v1/payments/mpesa-callback:
+ *   post:
+ *     summary: M-Pesa callback
+ *     description: Receives callback from M-Pesa payment system
+ *     tags: [Payments, M-Pesa]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentId
+ *               - status
+ *               - transactionId
+ *             properties:
+ *               paymentId:
+ *                 type: string
+ *                 description: Payment ID
+ *               status:
+ *                 type: string
+ *                 enum: [success, failed]
+ *                 description: Payment status from M-Pesa
+ *               transactionId:
+ *                 type: string
+ *                 description: M-Pesa transaction ID
+ *     responses:
+ *       200:
+ *         description: Callback processed successfully
+ *       400:
+ *         description: Bad request - validation error
+ *       404:
+ *         description: Payment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/mpesa-callback',
+  mpesaController.simulateMpesaCallback
 );
 
 export default router; 

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento M-Pesa - Paygator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .payment-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo {
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #333;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .logo .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .payment-amount {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .amount-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .amount-value {
+            font-size: 36px;
+            font-weight: 700;
+        }
+
+        .currency {
+            font-size: 18px;
+            opacity: 0.8;
+        }
+
+        .payment-form {
+            text-align: left;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .phone-input {
+            position: relative;
+        }
+
+        .phone-prefix {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            font-weight: 600;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .phone-input input {
+            padding-left: 50px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .mpesa-info {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .mpesa-logo {
+            width: 60px;
+            height: 60px;
+            background: #00a651;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .mpesa-text {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .pay-button {
+            width: 100%;
+            background: linear-gradient(135deg, #00a651, #008f45);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .pay-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 165, 81, 0.3);
+        }
+
+        .pay-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            display: none;
+            margin-left: 10px;
+        }
+
+        .spinner {
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Popup Styles */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .popup {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease;
+            position: relative;
+        }
+
+        .popup.success {
+            border-top: 5px solid #4CAF50;
+        }
+
+        .popup.error {
+            border-top: 5px solid #f44336;
+        }
+
+        .popup.info {
+            border-top: 5px solid #2196F3;
+        }
+
+        .popup-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .popup-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .popup-message {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+
+        .popup-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .popup-button:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .popup-close:hover {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .popup.show {
+            display: flex;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .payment-container {
+                padding: 30px 20px;
+                margin: 20px;
+            }
+            
+            .amount-value {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-container">
+        <div class="logo">
+            <h1>Paygator</h1>
+            <div class="subtitle">Gateway de Pagamento Seguro</div>
+        </div>
+
+        <div class="payment-amount">
+            <div class="amount-label">Valor a Pagar</div>
+            <div class="amount-value">
+                <%= amount %> <span class="currency"><%= currency %></span>
+            </div>
+        </div>
+
+        <div class="mpesa-info">
+            <div class="mpesa-logo">M</div>
+            <div class="mpesa-text">
+                Pagamento via M-Pesa<br>
+                Receberá uma notificação no seu telefone para confirmar o pagamento
+            </div>
+        </div>
+
+        <form class="payment-form" id="paymentForm">
+            <div class="form-group">
+                <label for="phone">Número de Telefone</label>
+                <div class="phone-input">
+                    <span class="phone-prefix">+258</span>
+                    <input 
+                        type="tel" 
+                        id="phone" 
+                        name="phone" 
+                        placeholder="8X XXX XXX" 
+                        pattern="[0-9]{9}"
+                        maxlength="9"
+                        required
+                        autocomplete="tel"
+                        value=""
+                    >
+                </div>
+            </div>
+
+            <button type="button" class="pay-button" id="payButton">
+                Pagar com M-Pesa
+                <span class="loading" id="loading">
+                    <span class="spinner"></span>
+                </span>
+            </button>
+        </form>
+
+        <div class="footer">
+            <p>Pagamento processado com segurança pela Paygator</p>
+            <p>© 2024 Paygator. Todos os direitos reservados.</p>
+        </div>
+    </div>
+
+    <!-- Popups de Feedback -->
+    <div class="popup-overlay" id="popupOverlay">
+        <div class="popup" id="popup">
+            <button class="popup-close" id="popupClose">&times;</button>
+            <div class="popup-icon" id="popupIcon"></div>
+            <div class="popup-title" id="popupTitle"></div>
+            <div class="popup-message" id="popupMessage"></div>
+            <button class="popup-button" id="popupButton">OK</button>
+        </div>
+    </div>
+
+    <!-- Dados do pagamento para o JavaScript -->
+    <script id="payment-data" type="application/json">
+        {
+            "paymentId": "<%= paymentId %>",
+            "amount": <%= amount %>,
+            "currency": "<%= currency %>",
+            "returnUrl": "<%= returnUrl %>"
+        }
+    </script>
+
+    <!-- JavaScript externo -->
+    <script src="/js/payment-form.js"></script>
+</body>
+</html>

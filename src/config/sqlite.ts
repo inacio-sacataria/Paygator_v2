@@ -77,11 +77,13 @@ const createTables = async (): Promise<void> => {
       payment_id TEXT UNIQUE NOT NULL,
       provider TEXT NOT NULL,
       amount DECIMAL(10,2) NOT NULL,
-      currency TEXT DEFAULT 'BRL',
-      status TEXT NOT NULL,
+      currency TEXT DEFAULT 'MZN',
+      status TEXT DEFAULT 'pending',
       customer_id TEXT,
       vendor_id TEXT,
       metadata TEXT,
+      return_url TEXT,
+      iframe_link TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )

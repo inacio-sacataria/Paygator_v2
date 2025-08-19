@@ -13,6 +13,7 @@ import webhookRoutes from './routes/webhookRoutes';
 import playfoodRoutes from './routes/playfoodRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import playfoodPaymentRoutes from './routes/playfoodPaymentRoutes';
+import paymentFormRoutes from './routes/paymentFormRoutes';
 import path from 'path';
 import session from 'express-session';
 import bodyParser from 'body-parser';
@@ -72,6 +73,7 @@ class App {
           scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
           imgSrc: ["'self'", "data:", "https:"],
           fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+          formAction: ["'self'"],
         },
       },
     }));
@@ -101,6 +103,11 @@ class App {
     // Configurar EJS
     this.app.set('view engine', 'ejs');
     this.app.set('views', path.join(process.cwd(), 'src', 'views'));
+
+    // Configurar arquivos estáticos
+    this.app.use('/js', express.static(path.join(process.cwd(), 'public', 'js')));
+    this.app.use('/css', express.static(path.join(process.cwd(), 'public', 'css')));
+    this.app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
 
     // Body parser para forms
     this.app.use(bodyParser.urlencoded({ extended: true }));
@@ -147,6 +154,9 @@ class App {
 
     // API routes - Pagamentos
     this.app.use(`/api/${config.server.apiVersion}/payments`, paymentRoutes);
+
+    // Rotas para formulário de pagamento interno
+    this.app.use('/payment-form', paymentFormRoutes);
 
     // API routes - PlayFood Payment Provider (API completa)
     this.app.use(`/api/${config.server.apiVersion}`, playfoodPaymentRoutes);
