@@ -9,6 +9,7 @@ import { connectDatabase, disconnectDatabase } from './config/database';
 import { logger } from './utils/logger';
 import { correlationIdMiddleware, requestLoggingMiddleware, errorLoggingMiddleware } from './middleware/logging';
 import { apiRateLimiter } from './middleware/rateLimiting';
+import { viewsMiddleware } from './middleware/viewsMiddleware';
 import webhookRoutes from './routes/webhookRoutes';
 import playfoodRoutes from './routes/playfoodRoutes';
 import paymentRoutes from './routes/paymentRoutes';
@@ -104,6 +105,9 @@ class App {
     // Middlewares de logging
     this.app.use(correlationIdMiddleware);
     this.app.use(requestLoggingMiddleware);
+    
+    // Middleware para gerenciar views em produção
+    this.app.use(viewsMiddleware);
 
     // Rate limiting global
     this.app.use(apiRateLimiter);
@@ -114,62 +118,50 @@ class App {
     // Determinar o diretório de views baseado no ambiente
     let viewsPath;
     if (process.env['NODE_ENV'] === 'production') {
-      // Em produção, tentar diferentes caminhos
-      const possiblePaths = [
-        path.join(process.cwd(), 'dist', 'src', 'views'),   // Build com dist/src/views (PRIORIDADE)
-        path.join(process.cwd(), 'src', 'views'),           // Desenvolvimento
-        path.join(process.cwd(), 'views'),                  // Diretório raiz
-        path.join(__dirname, 'views'),                      // Relativo ao dist
-        path.join(__dirname, '..', 'src', 'views')          // Relativo ao dist, subindo um nível
-      ];
+      // EM PRODUÇÃO: FORÇAR USO DO DIRETÓRIO DIST
+      const distViewsPath = path.join(process.cwd(), 'dist', 'src', 'views');
+      const srcViewsPath = path.join(process.cwd(), 'src', 'views');
       
-      logger.info('Searching for views directory in production', { 
+      logger.info('Production environment detected - forcing dist directory', { 
         cwd: process.cwd(), 
         __dirname: __dirname,
-        possiblePaths 
+        distViewsPath,
+        srcViewsPath
       });
       
-      for (const testPath of possiblePaths) {
-        if (require('fs').existsSync(testPath)) {
-          viewsPath = testPath;
-          logger.info('Views directory found in production', { path: testPath });
-          break;
-        }
-      }
-      
-      if (!viewsPath) {
-        // Se não encontrar, tentar copiar do src para dist
-        const srcViewsPath = path.join(process.cwd(), 'src', 'views');
-        const distViewsPath = path.join(process.cwd(), 'dist', 'src', 'views');
+      // Verificar se dist/src/views existe
+      if (require('fs').existsSync(distViewsPath)) {
+        viewsPath = distViewsPath;
+        logger.info('Using dist/src/views directory in production', { path: distViewsPath });
+      } else {
+        // Se não existir, copiar do src para dist
+        logger.warn('dist/src/views not found, copying from src to dist');
         
-        if (require('fs').existsSync(srcViewsPath)) {
-          try {
-            // Copiar views para dist se não existir
-            if (!require('fs').existsSync(distViewsPath)) {
-              require('fs').mkdirSync(path.dirname(distViewsPath), { recursive: true });
-              require('fs').copyFileSync(srcViewsPath, distViewsPath);
-              logger.info('Copied views from src to dist in production', { 
-                from: srcViewsPath, 
-                to: distViewsPath 
-              });
-            }
+        try {
+          // Criar diretório dist/src se não existir
+          const distSrcDir = path.dirname(distViewsPath);
+          if (!require('fs').existsSync(distSrcDir)) {
+            require('fs').mkdirSync(distSrcDir, { recursive: true });
+            logger.info('Created dist/src directory', { path: distSrcDir });
+          }
+          
+          // Copiar views do src para dist
+          if (require('fs').existsSync(srcViewsPath)) {
+            require('fs').copyFileSync(srcViewsPath, distViewsPath);
+            logger.info('Copied views from src to dist', { 
+              from: srcViewsPath, 
+              to: distViewsPath 
+            });
             viewsPath = distViewsPath;
-          } catch (error) {
-            logger.error('Failed to copy views directory', { error, from: srcViewsPath, to: distViewsPath });
-            // Fallback para src/views
-            viewsPath = srcViewsPath;
+          } else {
+            // Se src também não existir, criar diretório vazio
+            require('fs').mkdirSync(distViewsPath, { recursive: true });
+            logger.warn('Created empty dist/src/views directory', { path: distViewsPath });
+            viewsPath = distViewsPath;
           }
-        } else {
-          // Último recurso: criar diretório vazio
-          viewsPath = path.join(process.cwd(), 'dist', 'src', 'views');
-          try {
-            require('fs').mkdirSync(viewsPath, { recursive: true });
-            logger.warn('Created empty views directory as last resort', { path: viewsPath });
-          } catch (error) {
-            logger.error('Failed to create views directory', { error, path: viewsPath });
-            // Fallback absoluto
-            viewsPath = path.join(process.cwd(), 'src', 'views');
-          }
+        } catch (error) {
+          logger.error('Failed to setup dist directory, falling back to src', { error });
+          viewsPath = srcViewsPath;
         }
       }
     } else {
