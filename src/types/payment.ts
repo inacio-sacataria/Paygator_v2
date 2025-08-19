@@ -82,6 +82,6 @@ export interface ExternalPayment {
 
 export interface CreatePaymentResponse {
   externalPayment: ExternalPayment;
-  responseType: 'IFRAME' | 'REDIRECT' | 'API';
+  responseType: 'IFRAME' | 'REDIRECT' | 'API' | 'INTERNAL_FORM';
   link: string;
 } 

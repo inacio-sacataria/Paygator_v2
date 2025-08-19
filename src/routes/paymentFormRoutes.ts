@@ -6,12 +6,13 @@ import { logger } from '../utils/logger';
 const router = Router();
 
 // Rota para exibir o formulário de pagamento
-router.get('/:paymentId', async (req: Request, res: Response) => {
+router.get('/:paymentId', async (req: Request, res: Response): Promise<void> => {
   try {
     const { paymentId } = req.params;
     
     if (!paymentId) {
-      return res.status(400).send('ID do pagamento é obrigatório');
+      res.status(400).send('ID do pagamento é obrigatório');
+      return;
     }
 
     logger.info('Displaying payment form', {
@@ -25,16 +26,19 @@ router.get('/:paymentId', async (req: Request, res: Response) => {
     
     if (!payment) {
       logger.warn('Payment not found for form display', { paymentId });
-      return res.status(404).send('Pagamento não encontrado');
+      res.status(404).send('Pagamento não encontrado');
+      return;
     }
 
     // Verificar se o pagamento já foi processado
     if (payment.status === 'completed') {
-      return res.status(400).send('Este pagamento já foi processado com sucesso');
+      res.status(400).send('Este pagamento já foi processado com sucesso');
+      return;
     }
 
     if (payment.status === 'failed') {
-      return res.status(400).send('Este pagamento falhou. Crie um novo pagamento.');
+      res.status(400).send('Este pagamento falhou. Crie um novo pagamento.');
+      return;
     }
 
     // Extrair informações do metadata
@@ -65,7 +69,7 @@ router.get('/:paymentId', async (req: Request, res: Response) => {
 
   } catch (error) {
     logger.error('Error displaying payment form', {
-      paymentId: req.params.paymentId,
+      paymentId: req.params['paymentId'],
       error: error instanceof Error ? error.message : 'Unknown error'
     });
 
@@ -74,17 +78,19 @@ router.get('/:paymentId', async (req: Request, res: Response) => {
 });
 
 // Rota para exibir formulário com parâmetros na URL (para compatibilidade)
-router.get('/:paymentId/:amount/:currency', async (req: Request, res: Response) => {
+router.get('/:paymentId/:amount/:currency', async (req: Request, res: Response): Promise<void> => {
   try {
     const { paymentId, amount, currency } = req.params;
     
     if (!paymentId || !amount || !currency) {
-      return res.status(400).send('Parâmetros inválidos');
+      res.status(400).send('Parâmetros inválidos');
+      return;
     }
 
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
-      return res.status(400).send('Valor inválido');
+      res.status(400).send('Valor inválido');
+      return;
     }
 
     logger.info('Displaying payment form with URL parameters', {
@@ -99,16 +105,19 @@ router.get('/:paymentId/:amount/:currency', async (req: Request, res: Response) 
     
     if (!payment) {
       logger.warn('Payment not found for form display with URL params', { paymentId });
-      return res.status(404).send('Pagamento não encontrado');
+      res.status(404).send('Pagamento não encontrado');
+      return;
     }
 
     // Verificar se o pagamento já foi processado
     if (payment.status === 'completed') {
-      return res.status(400).send('Este pagamento já foi processado com sucesso');
+      res.status(400).send('Este pagamento já foi processado com sucesso');
+      return;
     }
 
     if (payment.status === 'failed') {
-      return res.status(400).send('Este pagamento falhou. Crie um novo pagamento.');
+      res.status(400).send('Este pagamento falhou. Crie um novo pagamento.');
+      return;
     }
 
     // Extrair informações do metadata
@@ -134,7 +143,7 @@ router.get('/:paymentId/:amount/:currency', async (req: Request, res: Response) 
 
   } catch (error) {
     logger.error('Error displaying payment form with URL parameters', {
-      paymentId: req.params.paymentId,
+      paymentId: req.params['paymentId'],
       error: error instanceof Error ? error.message : 'Unknown error'
     });
 
