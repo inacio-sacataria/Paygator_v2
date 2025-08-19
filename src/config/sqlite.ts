@@ -7,7 +7,26 @@ let db: Database | null = null;
 let isConnected = false;
 
 // Configuração do banco SQLite
-const DB_PATH = path.join(process.cwd(), 'data', 'paygator.db');
+const DB_PATH = (() => {
+  // Em produção, usar diretório temporário se não conseguir criar o diretório data
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      const fs = require('fs');
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      return path.join(dataDir, 'paygator.db');
+    } catch (error) {
+      // Se não conseguir criar o diretório data, usar diretório temporário
+      logger.warn('Could not create data directory, using temp directory', { error });
+      return path.join(require('os').tmpdir(), 'paygator.db');
+    }
+  }
+  
+  // Em desenvolvimento, usar diretório data normal
+  return path.join(process.cwd(), 'data', 'paygator.db');
+})();
 
 export const connectSQLite = async (): Promise<void> => {
   try {
