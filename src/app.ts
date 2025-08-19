@@ -111,12 +111,48 @@ class App {
     // Configurar EJS
     this.app.set('view engine', 'ejs');
     
-    // Em produção, verificar se o diretório views existe
-    const viewsPath = path.join(process.cwd(), 'src', 'views');
+    // Determinar o diretório de views baseado no ambiente
+    let viewsPath;
+    if (process.env['NODE_ENV'] === 'production') {
+      // Em produção, tentar diferentes caminhos
+      const possiblePaths = [
+        path.join(process.cwd(), 'src', 'views'),           // Desenvolvimento
+        path.join(process.cwd(), 'dist', 'src', 'views'),   // Build com src
+        path.join(process.cwd(), 'views'),                  // Diretório raiz
+        path.join(__dirname, 'views')                       // Relativo ao dist
+      ];
+      
+      for (const testPath of possiblePaths) {
+        if (require('fs').existsSync(testPath)) {
+          viewsPath = testPath;
+          logger.info('Views directory found in production', { path: testPath });
+          break;
+        }
+      }
+      
+      if (!viewsPath) {
+        // Se não encontrar, usar o diretório src/views e criar se necessário
+        viewsPath = path.join(process.cwd(), 'src', 'views');
+        try {
+          if (!require('fs').existsSync(viewsPath)) {
+            require('fs').mkdirSync(viewsPath, { recursive: true });
+            logger.info('Created views directory in production', { path: viewsPath });
+          }
+        } catch (error) {
+          logger.error('Failed to create views directory', { error, path: viewsPath });
+        }
+      }
+    } else {
+      // Em desenvolvimento, usar src/views
+      viewsPath = path.join(process.cwd(), 'src', 'views');
+    }
+    
     logger.info('Views directory configuration', {
       viewsPath,
       exists: require('fs').existsSync(viewsPath),
-      nodeEnv: process.env['NODE_ENV']
+      nodeEnv: process.env['NODE_ENV'],
+      cwd: process.cwd(),
+      __dirname: __dirname
     });
     
     this.app.set('views', viewsPath);
