@@ -38,7 +38,7 @@ router.get('/:paymentId', async (req: Request, res: Response): Promise<void> => 
       });
       
       // Em produção, se houver erro de banco, retornar erro específico
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env['NODE_ENV'] === 'production') {
         res.status(500).json({
           success: false,
           message: 'Database connection error',
@@ -109,25 +109,56 @@ router.get('/:paymentId', async (req: Request, res: Response): Promise<void> => 
 
     // Renderizar o formulário de pagamento
     try {
-      res.render('payment-form', {
-        paymentId: payment.payment_id,
-        amount: paymentDetails.amount,
-        currency: paymentDetails.currency,
-        returnUrl: paymentDetails.returnUrl
-      });
+      // Em produção, se houver erro de renderização, retornar HTML simples
+      if (process.env['NODE_ENV'] === 'production') {
+        res.render('payment-form', {
+          paymentId: payment.payment_id,
+          amount: paymentDetails.amount,
+          currency: paymentDetails.currency,
+          returnUrl: paymentDetails.returnUrl
+        });
+      } else {
+        // Em desenvolvimento, usar renderização normal
+        res.render('payment-form', {
+          paymentId: payment.payment_id,
+          amount: paymentDetails.amount,
+          currency: paymentDetails.currency,
+          returnUrl: paymentDetails.returnUrl
+        });
+      }
     } catch (renderError) {
       logger.error('Error rendering payment form template', {
         paymentId,
         error: renderError instanceof Error ? renderError.message : 'Unknown render error'
       });
       
-      res.status(500).json({
-        success: false,
-        message: 'Template rendering error',
-        error: 'Failed to render payment form template',
-        timestamp: new Date().toISOString(),
-        correlation_id: req.headers['x-correlation-id'] || 'unknown'
-      });
+      // Em produção, retornar HTML simples em caso de erro
+      if (process.env['NODE_ENV'] === 'production') {
+        res.status(500).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Erro no Formulário</title>
+            <meta charset="utf-8">
+          </head>
+          <body>
+            <h1>Erro ao carregar formulário</h1>
+            <p>Ocorreu um erro ao carregar o formulário de pagamento.</p>
+            <p>Erro: ${renderError instanceof Error ? renderError.message : 'Erro desconhecido'}</p>
+            <p>Payment ID: ${payment.payment_id}</p>
+            <p>Valor: ${paymentDetails.amount} ${paymentDetails.currency}</p>
+          </body>
+          </html>
+        `);
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Template rendering error',
+          error: 'Failed to render payment form template',
+          timestamp: new Date().toISOString(),
+          correlation_id: req.headers['x-correlation-id'] || 'unknown'
+        });
+      }
     }
 
   } catch (error) {

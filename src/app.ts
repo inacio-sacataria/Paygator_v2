@@ -70,7 +70,7 @@ class App {
         directives: {
           defaultSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
-          scriptSrc: ["'self'", "https://cdn.jsdelivr.net"],
+          scriptSrc: ["'self'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
           imgSrc: ["'self'", "data:", "https:"],
           fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
           formAction: ["'self'"],

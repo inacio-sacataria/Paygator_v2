@@ -9,7 +9,7 @@ let isConnected = false;
 // Configuração do banco SQLite
 const DB_PATH = (() => {
   // Em produção, usar diretório temporário se não conseguir criar o diretório data
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env['NODE_ENV'] === 'production') {
     try {
       const fs = require('fs');
       const dataDir = path.join(process.cwd(), 'data');
