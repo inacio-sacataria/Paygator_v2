@@ -115,69 +115,26 @@ class App {
     // Configurar EJS
     this.app.set('view engine', 'ejs');
     
-    // Determinar o diretório de views baseado no ambiente
-    let viewsPath;
-    if (process.env['NODE_ENV'] === 'production') {
-      // EM PRODUÇÃO: FORÇAR USO DO DIRETÓRIO DIST
-      const distViewsPath = path.join(process.cwd(), 'dist', 'src', 'views');
-      const srcViewsPath = path.join(process.cwd(), 'src', 'views');
-      
-      logger.info('Production environment detected - forcing dist directory', { 
-        cwd: process.cwd(), 
-        __dirname: __dirname,
-        distViewsPath,
-        srcViewsPath
-      });
-      
-      // Verificar se dist/src/views existe
-      if (require('fs').existsSync(distViewsPath)) {
-        viewsPath = distViewsPath;
-        logger.info('Using dist/src/views directory in production', { path: distViewsPath });
-      } else {
-        // Se não existir, copiar do src para dist
-        logger.warn('dist/src/views not found, copying from src to dist');
-        
-        try {
-          // Criar diretório dist/src se não existir
-          const distSrcDir = path.dirname(distViewsPath);
-          if (!require('fs').existsSync(distSrcDir)) {
-            require('fs').mkdirSync(distSrcDir, { recursive: true });
-            logger.info('Created dist/src directory', { path: distSrcDir });
-          }
-          
-          // Copiar views do src para dist
-          if (require('fs').existsSync(srcViewsPath)) {
-            require('fs').copyFileSync(srcViewsPath, distViewsPath);
-            logger.info('Copied views from src to dist', { 
-              from: srcViewsPath, 
-              to: distViewsPath 
-            });
-            viewsPath = distViewsPath;
-          } else {
-            // Se src também não existir, criar diretório vazio
-            require('fs').mkdirSync(distViewsPath, { recursive: true });
-            logger.warn('Created empty dist/src/views directory', { path: distViewsPath });
-            viewsPath = distViewsPath;
-          }
-        } catch (error) {
-          logger.error('Failed to setup dist directory, falling back to src', { error });
-          viewsPath = srcViewsPath;
-        }
-      }
-    } else {
-      // Em desenvolvimento, usar src/views
-      viewsPath = path.join(process.cwd(), 'src', 'views');
-    }
-    
-    logger.info('Views directory configuration', {
-      viewsPath,
-      exists: require('fs').existsSync(viewsPath),
+    // Configurar múltiplos diretórios de views (ordem de prioridade)
+    const possibleViewDirs = [
+      path.join(process.cwd(), 'dist', 'src', 'views'),
+      path.join(process.cwd(), 'src', 'views'),
+      path.join(process.cwd(), 'views'),
+      path.join(__dirname, 'views'),
+      path.join(__dirname, '..', 'src', 'views')
+    ];
+
+    // Logar quais diretórios existem para facilitar debug em produção
+    const viewDirsWithExistence = possibleViewDirs.map((dir) => ({ dir, exists: require('fs').existsSync(dir) }));
+    logger.info('Views directories (priority order)', {
       nodeEnv: process.env['NODE_ENV'],
       cwd: process.cwd(),
-      __dirname: __dirname
+      __dirname: __dirname,
+      candidates: viewDirsWithExistence
     });
-    
-    this.app.set('views', viewsPath);
+
+    // Express aceita um array de diretórios em 'views'
+    this.app.set('views', possibleViewDirs);
 
     // Configurar arquivos estáticos
     if (process.env['NODE_ENV'] === 'production') {
