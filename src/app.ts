@@ -116,11 +116,18 @@ class App {
     if (process.env['NODE_ENV'] === 'production') {
       // Em produção, tentar diferentes caminhos
       const possiblePaths = [
+        path.join(process.cwd(), 'dist', 'src', 'views'),   // Build com dist/src/views (PRIORIDADE)
         path.join(process.cwd(), 'src', 'views'),           // Desenvolvimento
-        path.join(process.cwd(), 'dist', 'src', 'views'),   // Build com src
         path.join(process.cwd(), 'views'),                  // Diretório raiz
-        path.join(__dirname, 'views')                       // Relativo ao dist
+        path.join(__dirname, 'views'),                      // Relativo ao dist
+        path.join(__dirname, '..', 'src', 'views')          // Relativo ao dist, subindo um nível
       ];
+      
+      logger.info('Searching for views directory in production', { 
+        cwd: process.cwd(), 
+        __dirname: __dirname,
+        possiblePaths 
+      });
       
       for (const testPath of possiblePaths) {
         if (require('fs').existsSync(testPath)) {
@@ -131,15 +138,38 @@ class App {
       }
       
       if (!viewsPath) {
-        // Se não encontrar, usar o diretório src/views e criar se necessário
-        viewsPath = path.join(process.cwd(), 'src', 'views');
-        try {
-          if (!require('fs').existsSync(viewsPath)) {
-            require('fs').mkdirSync(viewsPath, { recursive: true });
-            logger.info('Created views directory in production', { path: viewsPath });
+        // Se não encontrar, tentar copiar do src para dist
+        const srcViewsPath = path.join(process.cwd(), 'src', 'views');
+        const distViewsPath = path.join(process.cwd(), 'dist', 'src', 'views');
+        
+        if (require('fs').existsSync(srcViewsPath)) {
+          try {
+            // Copiar views para dist se não existir
+            if (!require('fs').existsSync(distViewsPath)) {
+              require('fs').mkdirSync(path.dirname(distViewsPath), { recursive: true });
+              require('fs').copyFileSync(srcViewsPath, distViewsPath);
+              logger.info('Copied views from src to dist in production', { 
+                from: srcViewsPath, 
+                to: distViewsPath 
+              });
+            }
+            viewsPath = distViewsPath;
+          } catch (error) {
+            logger.error('Failed to copy views directory', { error, from: srcViewsPath, to: distViewsPath });
+            // Fallback para src/views
+            viewsPath = srcViewsPath;
           }
-        } catch (error) {
-          logger.error('Failed to create views directory', { error, path: viewsPath });
+        } else {
+          // Último recurso: criar diretório vazio
+          viewsPath = path.join(process.cwd(), 'dist', 'src', 'views');
+          try {
+            require('fs').mkdirSync(viewsPath, { recursive: true });
+            logger.warn('Created empty views directory as last resort', { path: viewsPath });
+          } catch (error) {
+            logger.error('Failed to create views directory', { error, path: viewsPath });
+            // Fallback absoluto
+            viewsPath = path.join(process.cwd(), 'src', 'views');
+          }
         }
       }
     } else {
@@ -158,9 +188,27 @@ class App {
     this.app.set('views', viewsPath);
 
     // Configurar arquivos estáticos
-    this.app.use('/js', express.static(path.join(process.cwd(), 'public', 'js')));
-    this.app.use('/css', express.static(path.join(process.cwd(), 'public', 'css')));
-    this.app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
+    if (process.env['NODE_ENV'] === 'production') {
+      // Em produção, tentar dist/public primeiro
+      const distPublicPath = path.join(process.cwd(), 'dist', 'public');
+      if (require('fs').existsSync(distPublicPath)) {
+        this.app.use('/js', express.static(path.join(distPublicPath, 'js')));
+        this.app.use('/css', express.static(path.join(distPublicPath, 'css')));
+        this.app.use('/images', express.static(path.join(distPublicPath, 'images')));
+        logger.info('Using dist/public for static files in production');
+      } else {
+        // Fallback para public normal
+        this.app.use('/js', express.static(path.join(process.cwd(), 'public', 'js')));
+        this.app.use('/css', express.static(path.join(process.cwd(), 'public', 'css')));
+        this.app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
+        logger.warn('Using public directory for static files in production (dist/public not found)');
+      }
+    } else {
+      // Em desenvolvimento, usar public normal
+      this.app.use('/js', express.static(path.join(process.cwd(), 'public', 'js')));
+      this.app.use('/css', express.static(path.join(process.cwd(), 'public', 'css')));
+      this.app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
+    }
 
     // Body parser para forms
     this.app.use(bodyParser.urlencoded({ extended: true }));
