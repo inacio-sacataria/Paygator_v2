@@ -5,6 +5,7 @@ import { authenticateApiKey } from '../middleware/authentication';
 import { logger } from '../utils/logger';
 import Joi from 'joi';
 import { AuthenticatedRequest } from '../middleware/logging';
+import { sqliteService } from '../services/sqliteService';
 
 const router = Router();
 const paymentController = new PaymentController();
