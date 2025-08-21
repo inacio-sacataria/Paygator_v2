@@ -1,11 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { PaymentController } from '../controllers/paymentController';
 import { MpesaController } from '../controllers/mpesaController';
+import { getPaymentInfo } from '../controllers/playfoodPaymentController';
 import { authenticateApiKey } from '../middleware/authentication';
 import { logger } from '../utils/logger';
 import Joi from 'joi';
 import { AuthenticatedRequest } from '../middleware/logging';
 import { sqliteService } from '../services/sqliteService';
+import { paymentInfoSchema } from '../models/playfoodValidationSchemas';
 
 const router = Router();
 const paymentController = new PaymentController();
@@ -216,6 +218,45 @@ router.post('/create',
   authenticateApiKey,
   validateRequest(createPaymentSchema),
   paymentController.createPayment
+);
+
+/**
+ * @swagger
+ * /api/v1/payments/info:
+ *   post:
+ *     summary: Get payment information
+ *     description: Returns detailed payment info for a given paymentId and externalPayment
+ *     tags: [Payments]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentId
+ *               - externalPayment
+ *             properties:
+ *               paymentId:
+ *                 type: string
+ *               externalPayment:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   data:
+ *                     type: object
+ *     responses:
+ *       200:
+ *         description: Payment information retrieved successfully
+ *       400:
+ *         description: Bad request - validation error
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/info',
+  validateRequest(paymentInfoSchema),
+  getPaymentInfo
 );
 
 /**

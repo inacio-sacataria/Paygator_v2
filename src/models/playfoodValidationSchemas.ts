@@ -377,7 +377,13 @@ export const paymentInfoSchema = Joi.object({
     'string.min': 'Payment ID must be at least 1 character',
     'string.max': 'Payment ID must be at most 100 characters'
   }),
-  externalPayment: externalPaymentSchema.required()
+  // externalPayment is optional for info; if provided, allow empty id
+  externalPayment: Joi.object({
+    id: Joi.string().optional().allow('', null).max(100).messages({
+      'string.max': 'External payment ID must be at most 100 characters'
+    }),
+    data: Joi.any().optional()
+  }).optional()
 });
 
 // 3. POST /payments/capture

@@ -94,7 +94,7 @@ export interface PlayfoodExternalPayment {
 
 export interface PlayfoodPaymentInfoRequest {
   paymentId: string;
-  externalPayment: PlayfoodExternalPayment;
+  externalPayment?: PlayfoodExternalPayment | null;
 }
 
 export interface PlayfoodPaymentInfoResponse {

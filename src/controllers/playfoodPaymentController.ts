@@ -233,7 +233,7 @@ export const getPaymentInfo = async (req: Request, res: Response): Promise<void>
 
     logger.info('Getting payment info', {
       paymentId: requestData.paymentId,
-      externalPaymentId: requestData.externalPayment.id,
+      externalPaymentId: requestData.externalPayment?.id || null,
       correlationId
     });
 
@@ -281,7 +281,7 @@ export const getPaymentInfo = async (req: Request, res: Response): Promise<void>
       currency: 'USD',
       customer: mockCustomer,
       paymentMethodData: mockPaymentMethodData,
-      externalPayment: requestData.externalPayment
+      externalPayment: requestData.externalPayment || { id: requestData.paymentId, data: {} }
     };
 
     logger.info('Payment info retrieved successfully', {
