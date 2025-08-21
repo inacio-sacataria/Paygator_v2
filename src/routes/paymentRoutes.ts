@@ -388,7 +388,7 @@ router.post('/mpesa-callback',
  */
 router.post('/:paymentId/confirm', async (req: Request, res: Response) => {
   try {
-    const paymentId = req.params.paymentId as string;
+    const paymentId = req.params['paymentId'] as string;
     if (!paymentId) {
       res.status(400).json({
         success: false,
