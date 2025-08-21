@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger';
+import { sqliteService } from '../services/sqliteService';
 import {
   PlayfoodPaymentCreateRequest,
   PlayfoodPaymentCreateResponse,
@@ -237,51 +238,71 @@ export const getPaymentInfo = async (req: Request, res: Response): Promise<void>
       correlationId
     });
 
-    // Simular dados de pagamento
-    const mockCustomer: PlayfoodCustomer = {
-      email: 'customer@example.com',
-      phone: '+1234567890',
-      name: 'John Doe',
-      billingAddress: {
-        countryCode: 'US',
-        stateCode: 'CA',
-        city: 'Los Angeles',
-        postcode: '90001',
-        street1: '123 Main St',
-        street2: 'Apt 4'
-      },
-      external: {
-        id: 'cust_123',
-        data: null
+    // Buscar pagamento no banco e montar resposta real
+    const payment = await sqliteService.getPaymentById(requestData.paymentId);
+    if (!payment) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'PAYMENT_NOT_FOUND',
+          message: 'Payment not found'
+        },
+        timestamp: new Date().toISOString(),
+        correlationId
+      });
+      return;
+    }
+
+    const metadata = (() => {
+      try { return payment.metadata ? JSON.parse(payment.metadata) : {}; } catch { return {}; }
+    })();
+
+    const mapStatus = (dbStatus?: string): 'succeeded' | 'pending' | 'failed' | 'cancelled' => {
+      switch ((dbStatus || '').toLowerCase()) {
+        case 'completed': return 'succeeded';
+        case 'failed': return 'failed';
+        case 'cancelled': return 'cancelled';
+        case 'processing':
+        case 'pending':
+        default: return 'pending';
       }
     };
 
-    const mockCardData: PlayfoodCardData = {
-      token: 'tok_visa',
-      expiryYear: 2025,
-      expiryMonth: 12,
-      holder: 'John Doe',
-      last4Digits: '4242',
-      brand: 'Visa',
-      paymentOptionCode: 'visa',
-      data: null
-    };
+    const status = mapStatus(payment.status);
+    const amount = payment.amount || 0;
+    const currency = payment.currency || 'MZN';
 
-    const mockPaymentMethodData: PlayfoodPaymentMethodData = {
-      card: mockCardData
+    const customer: PlayfoodCustomer = {
+      email: metadata.customer_email || 'customer@example.com',
+      phone: metadata.customer_phone || '',
+      name: metadata.customer_name || 'Customer',
+      billingAddress: {
+        countryCode: metadata.billingAddress?.countryCode || '',
+        stateCode: metadata.billingAddress?.stateCode || '',
+        city: metadata.billingAddress?.city || '',
+        postcode: metadata.billingAddress?.postcode || '',
+        street1: metadata.billingAddress?.street1 || '',
+        street2: metadata.billingAddress?.street2 || ''
+      },
+      external: {
+        id: metadata.customer_external_id || 'customer_default',
+        data: metadata.customer_external_data || null
+      }
     };
 
     const response: PlayfoodPaymentInfoResponse = {
       paymentId: requestData.paymentId,
-      status: 'succeeded',
-      amount: 100.50,
-      amountReceived: 100.50,
-      amountCaptured: 100.50,
-      amountRefunded: 0.00,
-      currency: 'USD',
-      customer: mockCustomer,
-      paymentMethodData: mockPaymentMethodData,
-      externalPayment: requestData.externalPayment || { id: requestData.paymentId, data: {} }
+      status,
+      amount,
+      amountReceived: status === 'succeeded' ? amount : 0,
+      amountCaptured: status === 'succeeded' ? amount : 0,
+      amountRefunded: 0,
+      currency,
+      customer,
+      externalPayment: requestData.externalPayment || {
+        id: metadata.external_payment_id || requestData.paymentId,
+        data: { status: payment.status }
+      }
     };
 
     logger.info('Payment info retrieved successfully', {
