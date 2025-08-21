@@ -160,7 +160,7 @@ export class PaymentController {
             currency: paymentDataWithDefaults.currency
           }
         },
-        responseType: 'INTERNAL_FORM',
+        responseType: 'REDIRECT',
         link: internalPaymentLink
       };
 

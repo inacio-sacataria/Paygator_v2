@@ -137,16 +137,31 @@ class App {
     this.app.set('views', possibleViewDirs);
 
     // Configurar arquivos estáticos
+    logger.info('Configurando arquivos estáticos...', {
+      nodeEnv: process.env['NODE_ENV'],
+      cwd: process.cwd()
+    });
+    
     if (process.env['NODE_ENV'] === 'production') {
       // Em produção, tentar dist/public primeiro
       const distPublicPath = path.join(process.cwd(), 'dist', 'public');
       if (require('fs').existsSync(distPublicPath)) {
+        // Adicionar middleware geral para public PRIMEIRO
+        this.app.use(express.static(distPublicPath));
+        logger.info('Static middleware geral configurado para:', distPublicPath);
+        
+        // Depois os específicos para evitar conflitos
         this.app.use('/js', express.static(path.join(distPublicPath, 'js')));
         this.app.use('/css', express.static(path.join(distPublicPath, 'css')));
         this.app.use('/images', express.static(path.join(distPublicPath, 'images')));
         logger.info('Using dist/public for static files in production');
       } else {
         // Fallback para public normal
+        // Adicionar middleware geral para public PRIMEIRO
+        this.app.use(express.static(path.join(process.cwd(), 'public')));
+        logger.info('Static middleware geral configurado para:', path.join(process.cwd(), 'public'));
+        
+        // Depois os específicos para evitar conflitos
         this.app.use('/js', express.static(path.join(process.cwd(), 'public', 'js')));
         this.app.use('/css', express.static(path.join(process.cwd(), 'public', 'css')));
         this.app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
@@ -154,6 +169,11 @@ class App {
       }
     } else {
       // Em desenvolvimento, usar public normal
+      // Adicionar middleware geral para public PRIMEIRO
+      this.app.use(express.static(path.join(process.cwd(), 'public')));
+      logger.info('Static middleware geral configurado para:', path.join(process.cwd(), 'public'));
+      
+      // Depois os específicos para evitar conflitos
       this.app.use('/js', express.static(path.join(process.cwd(), 'public', 'js')));
       this.app.use('/css', express.static(path.join(process.cwd(), 'public', 'css')));
       this.app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
@@ -187,6 +207,43 @@ class App {
         message: 'Service is healthy',
         timestamp: new Date().toISOString(),
         correlation_id: req.headers['x-correlation-id'] || 'health_check'
+      });
+    });
+
+    // Debug route para testar arquivos estáticos
+    this.app.get('/debug/static', (req, res) => {
+      const fs = require('fs');
+      const path = require('path');
+      
+      const publicPath = path.join(process.cwd(), 'public');
+      const distPublicPath = path.join(process.cwd(), 'dist', 'public');
+      
+      const publicExists = fs.existsSync(publicPath);
+      const distPublicExists = fs.existsSync(distPublicPath);
+      
+      const publicFiles = publicExists ? fs.readdirSync(publicPath) : [];
+      const distPublicFiles = distPublicExists ? fs.readdirSync(distPublicPath) : [];
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          public: {
+            exists: publicExists,
+            path: publicPath,
+            files: publicFiles
+          },
+          distPublic: {
+            exists: distPublicExists,
+            path: distPublicPath,
+            files: distPublicFiles
+          },
+          nodeEnv: process.env['NODE_ENV'],
+          cwd: process.cwd(),
+          __dirname: __dirname
+        },
+        message: 'Static files debug information',
+        timestamp: new Date().toISOString(),
+        correlation_id: req.headers['x-correlation-id'] || 'debug_static'
       });
     });
 

@@ -417,5 +417,54 @@
 
     <!-- JavaScript externo -->
     <script src="/js/payment-form.js"></script>
+    
+    <!-- Error handling para JavaScript -->
+    <script>
+        console.log('🔍 Payment form template loaded');
+        console.log('📁 Current URL:', window.location.href);
+        console.log('🔧 Testing JavaScript file accessibility...');
+        
+        // Testar se o arquivo JavaScript está acessível
+        fetch('/js/payment-form.js')
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ JavaScript file accessible via fetch');
+                } else {
+                    console.error('❌ JavaScript file not accessible via fetch:', response.status, response.statusText);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error fetching JavaScript file:', error);
+            });
+        
+        window.addEventListener('error', function(e) {
+            console.error('❌ JavaScript error:', e.error);
+            console.error('📄 Error details:', {
+                message: e.message,
+                filename: e.filename,
+                lineno: e.lineno,
+                colno: e.colno
+            });
+        });
+        
+        // Verificar se o script foi carregado
+        setTimeout(function() {
+            if (typeof window.paymentFormLoaded === 'undefined') {
+                console.error('❌ Payment form JavaScript failed to load!');
+                console.log('🔍 Checking if script exists at:', '/js/payment-form.js');
+                
+                // Tentar carregar o script novamente
+                const script = document.createElement('script');
+                script.src = '/js/payment-form.js';
+                script.onerror = function() {
+                    console.error('❌ Failed to reload payment form JavaScript');
+                };
+                script.onload = function() {
+                    console.log('✅ Payment form JavaScript reloaded successfully');
+                };
+                document.head.appendChild(script);
+            }
+        }, 2000);
+    </script>
 </body>
 </html>

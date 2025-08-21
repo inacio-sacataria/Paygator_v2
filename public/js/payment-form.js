@@ -1,4 +1,11 @@
 // Payment Form JavaScript
+console.log('🔧 Payment form JavaScript loaded successfully!');
+console.log('📁 Current script location:', window.location.href);
+console.log('🔍 Looking for payment data element...');
+
+// Flag para indicar que o script foi carregado
+window.paymentFormLoaded = true;
+
 document.addEventListener('DOMContentLoaded', function() {
     // Obter dados do pagamento do script JSON
     const paymentDataElement = document.getElementById('payment-data');
