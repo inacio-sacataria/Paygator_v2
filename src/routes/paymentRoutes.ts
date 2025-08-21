@@ -388,7 +388,15 @@ router.post('/mpesa-callback',
  */
 router.post('/:paymentId/confirm', async (req: Request, res: Response) => {
   try {
-    const { paymentId } = req.params;
+    const paymentId = req.params.paymentId as string;
+    if (!paymentId) {
+      res.status(400).json({
+        success: false,
+        message: 'Parâmetro paymentId é obrigatório',
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
     
     // Buscar pagamento no banco
     const existingPayment = await sqliteService.getPaymentById(paymentId);
