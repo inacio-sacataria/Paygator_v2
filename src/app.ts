@@ -142,41 +142,74 @@ class App {
       cwd: process.cwd()
     });
     
-    if (process.env['NODE_ENV'] === 'production') {
-      // Em produção, tentar dist/public primeiro
-      const distPublicPath = path.join(process.cwd(), 'dist', 'public');
-      if (require('fs').existsSync(distPublicPath)) {
-        // Adicionar middleware geral para public PRIMEIRO
-        this.app.use(express.static(distPublicPath));
-        logger.info('Static middleware geral configurado para:', distPublicPath);
+    // Função para configurar static files com fallbacks e MIME types corretos
+    const setupStaticFiles = (basePath: string, label: string) => {
+      logger.info(`Configurando static files para ${label}:`, basePath);
+      
+      if (require('fs').existsSync(basePath)) {
+        // Middleware geral para public com MIME types corretos
+        this.app.use(express.static(basePath, {
+          setHeaders: (res, filePath) => {
+            // Configurar MIME types corretos
+            if (filePath.endsWith('.js')) {
+              res.setHeader('Content-Type', 'application/javascript');
+              res.setHeader('Cache-Control', 'public, max-age=3600');
+            } else if (filePath.endsWith('.css')) {
+              res.setHeader('Content-Type', 'text/css');
+              res.setHeader('Cache-Control', 'public, max-age=3600');
+            }
+          }
+        }));
         
-        // Depois os específicos para evitar conflitos
-        this.app.use('/js', express.static(path.join(distPublicPath, 'js')));
-        this.app.use('/css', express.static(path.join(distPublicPath, 'css')));
-        this.app.use('/images', express.static(path.join(distPublicPath, 'images')));
-        logger.info('Using dist/public for static files in production');
+        // Middlewares específicos para evitar conflitos
+        this.app.use('/js', express.static(path.join(basePath, 'js'), {
+          setHeaders: (res, filePath) => {
+            res.setHeader('Content-Type', 'application/javascript');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+          }
+        }));
+        this.app.use('/css', express.static(path.join(basePath, 'css'), {
+          setHeaders: (res, filePath) => {
+            res.setHeader('Content-Type', 'text/css');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+          }
+        }));
+        this.app.use('/images', express.static(path.join(basePath, 'images')));
+        
+        logger.info(`✅ Static files configurados para ${label}:`, basePath);
+        return true;
       } else {
-        // Fallback para public normal
-        // Adicionar middleware geral para public PRIMEIRO
-        this.app.use(express.static(path.join(process.cwd(), 'public')));
-        logger.info('Static middleware geral configurado para:', path.join(process.cwd(), 'public'));
-        
-        // Depois os específicos para evitar conflitos
-        this.app.use('/js', express.static(path.join(process.cwd(), 'public', 'js')));
-        this.app.use('/css', express.static(path.join(process.cwd(), 'public', 'css')));
-        this.app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
-        logger.warn('Using public directory for static files in production (dist/public not found)');
+        logger.warn(`❌ Diretório não encontrado para ${label}:`, basePath);
+        return false;
+      }
+    };
+    
+    if (process.env['NODE_ENV'] === 'production') {
+      // Em produção, tentar múltiplos caminhos
+      const possiblePaths = [
+        path.join(process.cwd(), 'dist', 'public'),
+        path.join(process.cwd(), 'public'),
+        path.join(__dirname, '..', 'public'),
+        path.join(__dirname, '..', '..', 'public'),
+        path.join(process.cwd(), 'src', 'public')
+      ];
+      
+      let staticFilesConfigured = false;
+      
+      for (const staticPath of possiblePaths) {
+        if (setupStaticFiles(staticPath, `production path: ${staticPath}`)) {
+          staticFilesConfigured = true;
+          break;
+        }
+      }
+      
+      if (!staticFilesConfigured) {
+        logger.error('❌ Nenhum diretório de static files encontrado em produção!');
+        logger.error('Caminhos tentados:', possiblePaths);
       }
     } else {
       // Em desenvolvimento, usar public normal
-      // Adicionar middleware geral para public PRIMEIRO
-      this.app.use(express.static(path.join(process.cwd(), 'public')));
-      logger.info('Static middleware geral configurado para:', path.join(process.cwd(), 'public'));
-      
-      // Depois os específicos para evitar conflitos
-      this.app.use('/js', express.static(path.join(process.cwd(), 'public', 'js')));
-      this.app.use('/css', express.static(path.join(process.cwd(), 'public', 'css')));
-      this.app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
+      setupStaticFiles(path.join(process.cwd(), 'public'), 'development');
     }
 
     // Body parser para forms
@@ -244,6 +277,212 @@ class App {
         message: 'Static files debug information',
         timestamp: new Date().toISOString(),
         correlation_id: req.headers['x-correlation-id'] || 'debug_static'
+      });
+    });
+
+    // Fallback route para servir JavaScript files com MIME type correto
+    this.app.get('/js/:filename', (req, res) => {
+      const fs = require('fs');
+      const path = require('path');
+      
+      const filename = req.params.filename;
+      const possiblePaths = [
+        path.join(process.cwd(), 'public', 'js', filename),
+        path.join(process.cwd(), 'dist', 'public', 'js', filename),
+        path.join(__dirname, '..', 'public', 'js', filename),
+        path.join(__dirname, '..', '..', 'public', 'js', filename)
+      ];
+      
+      let fileFound = false;
+      
+      for (const filePath of possiblePaths) {
+        if (fs.existsSync(filePath)) {
+          logger.info(`Serving JavaScript file via fallback route: ${filePath}`);
+          
+          // Configurar MIME type correto
+          res.setHeader('Content-Type', 'application/javascript');
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          
+          // Servir o arquivo
+          res.sendFile(filePath);
+          fileFound = true;
+          break;
+        }
+      }
+      
+      if (!fileFound) {
+        logger.warn(`JavaScript file not found: ${filename}`, {
+          searchedPaths: possiblePaths,
+          cwd: process.cwd(),
+          __dirname: __dirname
+        });
+        res.status(404).json({
+          success: false,
+          message: 'JavaScript file not found',
+          filename: filename,
+          searchedPaths: possiblePaths
+        });
+      }
+    });
+
+    // Fallback route para servir CSS files com MIME type correto
+    this.app.get('/css/:filename', (req, res) => {
+      const fs = require('fs');
+      const path = require('path');
+      
+      const filename = req.params.filename;
+      const possiblePaths = [
+        path.join(process.cwd(), 'public', 'css', filename),
+        path.join(process.cwd(), 'dist', 'public', 'css', filename),
+        path.join(__dirname, '..', 'public', 'css', filename),
+        path.join(__dirname, '..', '..', 'public', 'css', filename)
+      ];
+      
+      let fileFound = false;
+      
+      for (const filePath of possiblePaths) {
+        if (fs.existsSync(filePath)) {
+          logger.info(`Serving CSS file via fallback route: ${filePath}`);
+          
+          // Configurar MIME type correto
+          res.setHeader('Content-Type', 'text/css');
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          
+          // Servir o arquivo
+          res.sendFile(filePath);
+          fileFound = true;
+          break;
+        }
+      }
+      
+      if (!fileFound) {
+        logger.warn(`CSS file not found: ${filename}`, {
+          searchedPaths: possiblePaths,
+          cwd: process.cwd(),
+          __dirname: __dirname
+        });
+        res.status(404).json({
+          success: false,
+          message: 'CSS file not found',
+          filename: filename,
+          searchedPaths: possiblePaths
+        });
+      }
+    });
+
+    // Test route para verificar se arquivos estáticos estão funcionando
+    this.app.get('/test-static/:type/:filename', (req, res) => {
+      const fs = require('fs');
+      const path = require('path');
+      
+      const { type, filename } = req.params;
+      const possiblePaths = [
+        path.join(process.cwd(), 'public', type, filename),
+        path.join(process.cwd(), 'dist', 'public', type, filename),
+        path.join(__dirname, '..', 'public', type, filename),
+        path.join(__dirname, '..', '..', 'public', type, filename)
+      ];
+      
+      logger.info(`Testing static file access for ${type}/${filename}`, {
+        possiblePaths,
+        cwd: process.cwd(),
+        __dirname: __dirname
+      });
+      
+      let fileFound = false;
+      
+      for (const filePath of possiblePaths) {
+        if (fs.existsSync(filePath)) {
+          logger.info(`File found at: ${filePath}`);
+          
+          // Configurar MIME type correto
+          if (type === 'js') {
+            res.setHeader('Content-Type', 'application/javascript');
+          } else if (type === 'css') {
+            res.setHeader('Content-Type', 'text/css');
+          }
+          
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          
+          // Servir o arquivo
+          res.sendFile(filePath);
+          fileFound = true;
+          break;
+        }
+      }
+      
+      if (!fileFound) {
+        logger.warn(`Static file not found: ${type}/${filename}`, {
+          searchedPaths: possiblePaths,
+          cwd: process.cwd(),
+          __dirname: __dirname
+        });
+        res.status(404).json({
+          success: false,
+          message: 'Static file not found',
+          file: `${type}/${filename}`,
+          searchedPaths: possiblePaths,
+          cwd: process.cwd(),
+          __dirname: __dirname
+        });
+      }
+    });
+
+    // Route para listar todos os arquivos disponíveis
+    this.app.get('/list-files', (req, res) => {
+      const fs = require('fs');
+      const path = require('path');
+      
+      const possiblePaths = [
+        path.join(process.cwd(), 'public'),
+        path.join(process.cwd(), 'dist', 'public'),
+        path.join(__dirname, '..', 'public'),
+        path.join(__dirname, '..', '..', 'public')
+      ];
+      
+      const fileList: Record<string, string[] | string> = {};
+      
+      possiblePaths.forEach(dirPath => {
+        if (fs.existsSync(dirPath)) {
+          try {
+            const listDirectory = (dir: string, prefix = ''): string[] => {
+              const items = fs.readdirSync(dir);
+              const files: string[] = [];
+              
+              items.forEach((item: string) => {
+                const fullPath = path.join(dir, item);
+                const stat = fs.statSync(fullPath);
+                
+                if (stat.isDirectory()) {
+                  files.push(`${prefix}${item}/`);
+                  listDirectory(fullPath, prefix + '  ');
+                } else {
+                  files.push(`${prefix}${item}`);
+                }
+              });
+              
+              return files;
+            };
+            
+            fileList[dirPath] = listDirectory(dirPath);
+          } catch (error) {
+            fileList[dirPath] = `Error reading directory: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          }
+        } else {
+          fileList[dirPath] = 'Directory does not exist';
+        }
+      });
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          fileList,
+          cwd: process.cwd(),
+          __dirname: __dirname,
+          nodeEnv: process.env['NODE_ENV']
+        },
+        message: 'File listing for debugging',
+        timestamp: new Date().toISOString()
       });
     });
 

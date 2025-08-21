@@ -391,6 +391,7 @@
         <div class="footer">
             <p>Pagamento processado com segurança pela Paygator</p>
             <p>© 2024 Paygator. Todos os direitos reservados.</p>
+            <button onclick="testStaticFiles()" style="margin-top: 10px; padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔧 Test Static Files</button>
         </div>
     </div>
 
@@ -424,18 +425,62 @@
         console.log('📁 Current URL:', window.location.href);
         console.log('🔧 Testing JavaScript file accessibility...');
         
-        // Testar se o arquivo JavaScript está acessível
-        fetch('/js/payment-form.js')
-            .then(response => {
-                if (response.ok) {
-                    console.log('✅ JavaScript file accessible via fetch');
-                } else {
-                    console.error('❌ JavaScript file not accessible via fetch:', response.status, response.statusText);
-                }
+        // Testar múltiplas rotas para o arquivo JavaScript
+        const testRoutes = [
+            '/js/payment-form.js',
+            '/test-static/js/payment-form.js'
+        ];
+        
+        testRoutes.forEach(route => {
+            fetch(route)
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`✅ JavaScript file accessible via ${route}:`, response.status, response.statusText);
+                        console.log('Content-Type:', response.headers.get('content-type'));
+                    } else {
+                        console.error(`❌ JavaScript file not accessible via ${route}:`, response.status, response.statusText);
+                    }
+                })
+                .catch(error => {
+                    console.error(`❌ Error fetching JavaScript file via ${route}:`, error);
+                });
+        });
+        
+        // Testar se o arquivo existe via debug route
+        fetch('/debug/static')
+            .then(response => response.json())
+            .then(data => {
+                console.log('🔍 Debug static info:', data);
             })
             .catch(error => {
-                console.error('❌ Error fetching JavaScript file:', error);
+                console.error('❌ Error fetching debug info:', error);
             });
+        
+        // Função para testar arquivos estáticos
+        window.testStaticFiles = function() {
+            console.log('🔧 Testing static files...');
+            
+            // Testar múltiplas rotas
+            const testRoutes = [
+                '/js/payment-form.js',
+                '/test-static/js/payment-form.js',
+                '/debug/static',
+                '/list-files'
+            ];
+            
+            testRoutes.forEach(route => {
+                fetch(route)
+                    .then(response => {
+                        console.log(`✅ ${route}:`, response.status, response.statusText);
+                        if (route.includes('.js')) {
+                            console.log('Content-Type:', response.headers.get('content-type'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error(`❌ ${route}:`, error);
+                    });
+            });
+        };
         
         window.addEventListener('error', function(e) {
             console.error('❌ JavaScript error:', e.error);
