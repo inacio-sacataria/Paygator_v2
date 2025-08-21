@@ -363,4 +363,73 @@ router.post('/mpesa-callback',
   mpesaController.simulateMpesaCallback
 );
 
+/**
+ * @swagger
+ * /api/v1/payments/{paymentId}/confirm:
+ *   post:
+ *     summary: Manually confirm payment
+ *     description: Manually confirms a payment for testing purposes
+ *     tags: [Payments, Testing]
+ *     parameters:
+ *       - in: path
+ *         name: paymentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Payment ID to confirm
+ *     responses:
+ *       200:
+ *         description: Payment confirmed successfully
+ *       404:
+ *         description: Payment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/:paymentId/confirm', async (req: Request, res: Response) => {
+  try {
+    const { paymentId } = req.params;
+    
+    // Buscar pagamento no banco
+    const existingPayment = await sqliteService.getPaymentById(paymentId);
+    
+    if (!existingPayment) {
+      res.status(404).json({
+        success: false,
+        message: 'Pagamento não encontrado',
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
+
+    // Atualizar status para completed
+    await sqliteService.updatePayment(paymentId, {
+      status: 'completed',
+      metadata: JSON.stringify({
+        ...JSON.parse(existingPayment.metadata || '{}'),
+        manuallyConfirmed: true,
+        confirmedAt: new Date().toISOString()
+      })
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Pagamento confirmado manualmente com sucesso',
+      data: {
+        paymentId,
+        status: 'completed',
+        confirmedAt: new Date().toISOString()
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno ao confirmar pagamento',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 export default router; 

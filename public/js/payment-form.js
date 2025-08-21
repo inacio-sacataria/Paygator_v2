@@ -165,12 +165,12 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Response data:', result);
             
             if (result.success) {
-                showSuccess('✅ Pagamento iniciado com sucesso! Verifique seu telefone para confirmar.', true);
+                showSuccess('✅ Pagamento iniciado com sucesso! Simulando confirmação automática...', true);
                 
-                // Aguardar 3 segundos antes de iniciar o polling
+                // Aguardar 2 segundos antes de iniciar o polling
                 setTimeout(() => {
                     pollPaymentStatus(paymentData.paymentId);
-                }, 3000);
+                }, 2000);
             } else {
                 showError('❌ ' + (result.message || 'Erro ao processar pagamento. Tente novamente.'), true);
             }
@@ -195,11 +195,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Função de polling para verificar status
     async function pollPaymentStatus(paymentId) {
-        const maxAttempts = 30; // 5 minutes with 10 second intervals
+        const maxAttempts = 60; // 10 minutes with 5 second intervals
         let attempts = 0;
         
         // Mostrar popup de processamento
-        showLoading('Iniciando verificação do status do pagamento...');
+        showLoading('Aguardando confirmação automática do pagamento...');
         
         const pollInterval = setInterval(async () => {
             attempts++;
@@ -208,22 +208,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 const response = await fetch(`/api/v1/payments/${paymentId}/public-status`);
                 const result = await response.json();
                 
+                console.log('Payment status check:', result.status, 'attempt:', attempts);
+                
                 if (result.status === 'completed') {
                     hideLoading();
-                    showSuccess('🎉 Pagamento confirmado com sucesso! Redirecionando...', false);
+                    showSuccess('🎉 Pagamento aprovado com sucesso! Redirecionando...', false);
                     clearInterval(pollInterval);
                     
-                    // Redirect after 5 seconds
+                    // Redirect after 3 seconds
                     setTimeout(() => {
                         window.location.href = paymentData.returnUrl;
-                    }, 5000);
+                    }, 3000);
                 } else if (result.status === 'failed') {
                     hideLoading();
                     showError('❌ Pagamento falhou. Tente novamente.', false);
                     clearInterval(pollInterval);
                 } else if (result.status === 'processing') {
-                    // Atualizar popup de loading
-                    showLoading(`Processando pagamento... (tentativa ${attempts}/${maxAttempts})`);
+                    // Atualizar popup de loading com mensagem mais clara
+                    const timeElapsed = Math.floor(attempts * 5 / 60); // segundos em minutos
+                    showLoading(`Aguardando confirmação automática... (${timeElapsed}m ${(attempts * 5) % 60}s)`);
                 } else if (attempts >= maxAttempts) {
                     hideLoading();
                     showError('⏰ Tempo limite excedido. Verifique o status do pagamento.', false);
@@ -233,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error polling payment status:', error);
                 showLoading('Erro ao verificar status. Tentando novamente...');
             }
-        }, 10000); // Poll every 10 seconds
+        }, 5000); // Poll every 5 seconds for faster response
     }
     
     // Format phone number input

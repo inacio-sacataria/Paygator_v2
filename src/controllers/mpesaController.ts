@@ -105,6 +105,44 @@ export class MpesaController {
         phone
       });
 
+      // Simular confirmação automática do pagamento após 5 segundos
+      setTimeout(async () => {
+        try {
+          logger.info('Simulating automatic M-Pesa payment confirmation', {
+            correlationId: req.correlationId,
+            paymentId,
+            mpesaTransactionId
+          });
+
+          // Atualizar status para completed
+          await sqliteService.updatePayment(paymentId, {
+            status: 'completed',
+            metadata: JSON.stringify({
+              ...JSON.parse(existingPayment.metadata || '{}'),
+              mpesa: {
+                ...JSON.parse(existingPayment.metadata || '{}').mpesa,
+                status: 'completed',
+                completedAt: new Date().toISOString(),
+                autoConfirmed: true,
+                confirmedAt: new Date().toISOString()
+              }
+            })
+          });
+
+          logger.info('Payment automatically confirmed as completed', {
+            correlationId: req.correlationId,
+            paymentId,
+            status: 'completed'
+          });
+        } catch (error) {
+          logger.error('Error in automatic payment confirmation', {
+            correlationId: req.correlationId,
+            paymentId,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }, 5000); // 5 segundos
+
       // Retornar sucesso
       res.status(200).json({
         success: true,

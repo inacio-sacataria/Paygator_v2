@@ -356,8 +356,9 @@
         <div class="mpesa-info">
             <div class="mpesa-logo">M</div>
             <div class="mpesa-text">
-                Pagamento via M-Pesa<br>
-                Receberá uma notificação no seu telefone para confirmar o pagamento
+                Pagamento via M-Pesa (Simulação)<br>
+                <strong>Confirmação automática em 5 segundos</strong><br>
+                <small>Esta é uma demonstração do sistema</small>
             </div>
         </div>
 
@@ -381,7 +382,7 @@
             </div>
 
             <button type="button" class="pay-button" id="payButton">
-                Pagar com M-Pesa
+                🧪 Simular Pagamento M-Pesa
                 <span class="loading" id="loading">
                     <span class="spinner"></span>
                 </span>
@@ -391,7 +392,10 @@
         <div class="footer">
             <p>Pagamento processado com segurança pela Paygator</p>
             <p>© 2024 Paygator. Todos os direitos reservados.</p>
-            <button onclick="testStaticFiles()" style="margin-top: 10px; padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔧 Test Static Files</button>
+            <div style="margin-top: 15px;">
+                <button onclick="testStaticFiles()" style="margin: 5px; padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔧 Test Static Files</button>
+                <button onclick="confirmPaymentManually()" style="margin: 5px; padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">✅ Confirmar Pagamento</button>
+            </div>
         </div>
     </div>
 
@@ -479,6 +483,39 @@
                     .catch(error => {
                         console.error(`❌ ${route}:`, error);
                     });
+            });
+        };
+        
+        // Função para confirmar manualmente o pagamento
+        window.confirmPaymentManually = function() {
+            const paymentId = JSON.parse(document.getElementById('payment-data').textContent).paymentId;
+            console.log('🔧 Confirmando pagamento manualmente:', paymentId);
+            
+            fetch(`/api/v1/payments/${paymentId}/confirm`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    console.log('✅ Pagamento confirmado manualmente:', result);
+                    showSuccess('🎉 Pagamento confirmado manualmente! Redirecionando...', false);
+                    
+                    // Redirect after 3 seconds
+                    setTimeout(() => {
+                        const returnUrl = JSON.parse(document.getElementById('payment-data').textContent).returnUrl;
+                        window.location.href = returnUrl;
+                    }, 3000);
+                } else {
+                    console.error('❌ Erro ao confirmar pagamento:', result);
+                    showError('❌ Erro ao confirmar pagamento: ' + result.message, true);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro na confirmação manual:', error);
+                showError('❌ Erro na confirmação manual do pagamento', true);
             });
         };
         
