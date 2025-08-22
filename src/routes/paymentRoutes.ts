@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { PaymentController } from '../controllers/paymentController';
 import { MpesaController } from '../controllers/mpesaController';
+import { EmolaController } from '../controllers/emolaController';
 import { getPaymentInfo } from '../controllers/playfoodPaymentController';
 import { authenticateApiKey } from '../middleware/authentication';
 import { logger } from '../utils/logger';
@@ -12,6 +13,7 @@ import { paymentInfoSchema } from '../models/playfoodValidationSchemas';
 const router = Router();
 const paymentController = new PaymentController();
 const mpesaController = new MpesaController();
+const emolaController = new EmolaController();
 
 // Schema de validação para criar pagamento - apenas amount é obrigatório
 const createPaymentSchema = Joi.object({
@@ -403,6 +405,93 @@ router.post('/process-mpesa',
  */
 router.post('/mpesa-callback',
   mpesaController.simulateMpesaCallback
+);
+
+/**
+ * @swagger
+ * /api/v1/payments/process-emola:
+ *   post:
+ *     summary: Process e-Mola payment
+ *     description: Processes a payment using e-Mola mobile money
+ *     tags: [Payments, e-Mola]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentId
+ *               - phone
+ *               - amount
+ *               - currency
+ *             properties:
+ *               paymentId:
+ *                 type: string
+ *                 description: Payment ID
+ *               phone:
+ *                 type: string
+ *                 description: Phone number in format +258XXXXXXXXX
+ *               amount:
+ *                 type: number
+ *                 description: Payment amount
+ *               currency:
+ *                 type: string
+ *                 description: Payment currency
+ *     responses:
+ *       200:
+ *         description: e-Mola payment processed successfully
+ *       400:
+ *         description: Bad request - validation error
+ *       404:
+ *         description: Payment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/process-emola',
+  emolaController.processEmolaPayment
+);
+
+/**
+ * @swagger
+ * /api/v1/payments/emola-callback:
+ *   post:
+ *     summary: e-Mola callback
+ *     description: Receives callback from e-Mola payment system
+ *     tags: [Payments, e-Mola]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentId
+ *               - status
+ *               - transactionId
+ *             properties:
+ *               paymentId:
+ *                 type: string
+ *                 description: Payment ID
+ *               status:
+ *                 type: string
+ *                 enum: [success, failed]
+ *                 description: Payment status from e-Mola
+ *               transactionId:
+ *                 type: string
+ *                 description: e-Mola transaction ID
+ *     responses:
+ *       200:
+ *         description: Callback processed successfully
+ *       400:
+ *         description: Bad request - validation error
+ *       404:
+ *         description: Payment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/emola-callback',
+  emolaController.simulateEmolaCallback
 );
 
 /**

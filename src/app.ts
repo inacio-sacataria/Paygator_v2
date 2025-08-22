@@ -116,13 +116,22 @@ class App {
     this.app.set('view engine', 'ejs');
     
     // Configurar múltiplos diretórios de views (ordem de prioridade)
-    const possibleViewDirs = [
-      path.join(process.cwd(), 'dist', 'src', 'views'),
-      path.join(process.cwd(), 'src', 'views'),
-      path.join(process.cwd(), 'views'),
-      path.join(__dirname, 'views'),
-      path.join(__dirname, '..', 'src', 'views')
-    ];
+    // Em desenvolvimento prioriza src/views; em produção prioriza dist/src/views
+    const possibleViewDirs = process.env['NODE_ENV'] === 'production'
+      ? [
+          path.join(process.cwd(), 'dist', 'src', 'views'),
+          path.join(process.cwd(), 'src', 'views'),
+          path.join(process.cwd(), 'views'),
+          path.join(__dirname, 'views'),
+          path.join(__dirname, '..', 'src', 'views')
+        ]
+      : [
+          path.join(process.cwd(), 'src', 'views'),
+          path.join(process.cwd(), 'dist', 'src', 'views'),
+          path.join(process.cwd(), 'views'),
+          path.join(__dirname, 'views'),
+          path.join(__dirname, '..', 'src', 'views')
+        ];
 
     // Logar quais diretórios existem para facilitar debug em produção
     const viewDirsWithExistence = possibleViewDirs.map((dir) => ({ dir, exists: require('fs').existsSync(dir) }));

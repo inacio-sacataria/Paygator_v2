@@ -121,11 +121,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    function detectProvider(phoneDigits) {
+        if (!phoneDigits || phoneDigits.length < 2) return null;
+        const prefix = phoneDigits.substring(0, 2);
+        if (prefix === '84' || prefix === '85') return 'mpesa';
+        if (prefix === '86' || prefix === '87') return 'emola';
+        return null;
+    }
+
+    function updateProviderUI(provider) {
+        const mpesaCard = document.getElementById('card-mpesa');
+        const emolaCard = document.getElementById('card-emola');
+        const payButton = document.getElementById('payButton');
+        const payLabel = document.getElementById('payLabel');
+        mpesaCard && mpesaCard.classList.remove('active');
+        emolaCard && emolaCard.classList.remove('active');
+        if (provider === 'mpesa') {
+            mpesaCard && mpesaCard.classList.add('active');
+            if (payLabel) payLabel.textContent = 'Pagar com M-Pesa';
+        } else if (provider === 'emola') {
+            emolaCard && emolaCard.classList.add('active');
+            if (payLabel) payLabel.textContent = 'Pagar com e-Mola';
+        } else {
+            if (payLabel) payLabel.textContent = 'Pagar';
+        }
+    }
+
     // Função para processar pagamento
     async function processPayment() {
         const phone = document.getElementById('phone').value;
         const payButton = document.getElementById('payButton');
         const loading = document.getElementById('loading');
+        const payLabel = document.getElementById('payLabel');
         
         console.log('Telefone digitado:', phone);
         console.log('Comprimento do telefone:', phone.length);
@@ -135,19 +162,34 @@ document.addEventListener('DOMContentLoaded', function() {
             showError('Por favor, insira um número de telefone válido (9 dígitos)', true);
             return;
         }
+        const provider = detectProvider(phone);
+        if (!provider) {
+            showError('Prefixo inválido. Use 84/85 (M-Pesa) ou 86/87 (e-Mola).', true);
+            return;
+        }
+        updateProviderUI(provider);
         
         // Show loading
-        payButton.disabled = true;
-        loading.style.display = 'inline-block';
+        if (payButton) {
+            payButton.disabled = true;
+            payButton.style.opacity = '0.8';
+        }
+        if (loading) {
+            loading.style.display = 'inline-block';
+        } else {
+            // Fallback visual se o elemento de loading não existir
+            showLoading('Processando pagamento...');
+        }
+        if (payLabel) payLabel.textContent = 'Processando...';
         
         try {
-            console.log('Enviando pagamento M-Pesa...');
+            console.log('Enviando pagamento via', provider.toUpperCase(), '...');
             console.log('Payment ID:', paymentData.paymentId);
             console.log('Phone:', '+258' + phone);
             console.log('Amount:', paymentData.amount);
             console.log('Currency:', paymentData.currency);
-            
-            const response = await fetch('/api/v1/payments/process-mpesa', {
+            const endpoint = provider === 'mpesa' ? '/api/v1/payments/process-mpesa' : '/api/v1/payments/process-emola';
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -165,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Response data:', result);
             
             if (result.success) {
-                showSuccess('✅ Pagamento iniciado com sucesso! Simulando confirmação automática...', true);
+                // Não abrimos popup agora; aguardamos o polling terminar para mostrar sucesso
                 
                 // Aguardar 2 segundos antes de iniciar o polling
                 setTimeout(() => {
@@ -179,13 +221,24 @@ document.addEventListener('DOMContentLoaded', function() {
             showError('Erro de conexão. Verifique sua internet e tente novamente.', true);
         } finally {
             // Hide loading
-            payButton.disabled = false;
-            loading.style.display = 'none';
+            if (payButton) {
+                payButton.disabled = false;
+                payButton.style.opacity = '1';
+            }
+            if (loading) {
+                loading.style.display = 'none';
+            } else {
+                hideLoading();
+            }
+            if (payLabel) payLabel.textContent = 'Pagar';
         }
     }
 
-    // Event listener para o botão de pagamento
-    document.getElementById('payButton').addEventListener('click', processPayment);
+    // Event listener para o botão de pagamento (se existir)
+    const payBtnEl = document.getElementById('payButton');
+    if (payBtnEl) {
+        payBtnEl.addEventListener('click', processPayment);
+    }
     
     // Event listener para o formulário (prevenir submissão padrão)
     document.getElementById('paymentForm').addEventListener('submit', function(e) {
@@ -198,8 +251,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const maxAttempts = 60; // 10 minutes with 5 second intervals
         let attempts = 0;
         
-        // Mostrar popup de processamento
-        showLoading('Aguardando confirmação automática do pagamento...');
+        // Atualizar botão como aguardando confirmação
+        const payButton = document.getElementById('payButton');
+        const payLabel = document.getElementById('payLabel');
+        const loading = document.getElementById('loading');
+        if (payButton) payButton.disabled = true;
+        if (payLabel) payLabel.textContent = 'Aguardando confirmação...';
+        if (loading) loading.style.display = 'inline-block';
         
         const pollInterval = setInterval(async () => {
             attempts++;
@@ -211,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Payment status check:', result.status, 'attempt:', attempts);
                 
                 if (result.status === 'completed') {
-                    hideLoading();
+                    // Sucesso: mostrar somente uma confirmação final
                     showSuccess('🎉 Pagamento aprovado com sucesso! Redirecionando...', false);
                     clearInterval(pollInterval);
                     
@@ -220,32 +278,34 @@ document.addEventListener('DOMContentLoaded', function() {
                         window.location.href = paymentData.returnUrl;
                     }, 3000);
                 } else if (result.status === 'failed') {
-                    hideLoading();
+                    if (loading) loading.style.display = 'none';
                     showError('❌ Pagamento falhou. Tente novamente.', false);
                     clearInterval(pollInterval);
                 } else if (result.status === 'processing') {
-                    // Atualizar popup de loading com mensagem mais clara
-                    const timeElapsed = Math.floor(attempts * 5 / 60); // segundos em minutos
-                    showLoading(`Aguardando confirmação automática... (${timeElapsed}m ${(attempts * 5) % 60}s)`);
+                    // Atualizar label do botão com tempo decorrido
+                    const timeElapsed = Math.floor((attempts * 5) / 60);
+                    if (payLabel) payLabel.textContent = `Aguardando... (${timeElapsed}m)`;
                 } else if (attempts >= maxAttempts) {
-                    hideLoading();
+                    if (loading) loading.style.display = 'none';
                     showError('⏰ Tempo limite excedido. Verifique o status do pagamento.', false);
                     clearInterval(pollInterval);
                 }
             } catch (error) {
                 console.error('Error polling payment status:', error);
-                showLoading('Erro ao verificar status. Tentando novamente...');
+                if (payLabel) payLabel.textContent = 'Verificando status...';
             }
         }, 5000); // Poll every 5 seconds for faster response
     }
     
-    // Format phone number input
+    // Format phone number input + auto-detect provider
     document.getElementById('phone').addEventListener('input', function(e) {
         let value = e.target.value.replace(/\D/g, '');
         if (value.length > 9) {
             value = value.substring(0, 9);
         }
         e.target.value = value;
+        const provider = detectProvider(value);
+        updateProviderUI(provider);
     });
 
     console.log('Payment form JavaScript carregado com sucesso!');

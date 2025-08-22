@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pagamento M-Pesa - Paygator</title>
+    <title>Pagamento - Nebula Payments</title>
     <style>
         * {
             margin: 0;
@@ -122,34 +122,15 @@
             z-index: 2;
         }
 
-        .mpesa-info {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-
-        .mpesa-logo {
-            width: 60px;
-            height: 60px;
-            background: #00a651;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .mpesa-text {
-            color: #666;
-            font-size: 14px;
-            line-height: 1.5;
-        }
+        .provider-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .provider-card { border: 1px solid #e9ecef; border-radius: 12px; padding: 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all .2s ease; background: #f8f9fa; }
+        .provider-card:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(0,0,0,.06); }
+        .provider-card.active { border-color: #667eea; background: #eef0ff; }
+        .provider-logo { width: 44px; height: 44px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; background: #ffffff; border: 1px solid #e9ecef; }
+        .provider-logo img { width: 100%; height: 100%; object-fit: contain; }
+        .provider-logo.mpesa { background: #ffffff; }
+        .provider-logo.emola { background: #ffffff; }
+        .provider-text { color: #444; font-size: 14px; line-height: 1.3; }
 
         .pay-button {
             width: 100%;
@@ -327,6 +308,14 @@
             font-size: 12px;
         }
 
+        .helper-note {
+            margin-bottom: 16px;
+            color: #555;
+            font-size: 13px;
+            text-align: center;
+        }
+        .helper-note small { color: #777; }
+
         @media (max-width: 600px) {
             .payment-container {
                 padding: 30px 20px;
@@ -336,13 +325,48 @@
             .amount-value {
                 font-size: 28px;
             }
+            .provider-cards { grid-template-columns: 1fr; gap: 10px; }
+            .provider-card { padding: 12px; }
+            .provider-logo { width: 40px; height: 40px; }
+            .provider-text { font-size: 13px; }
+            .pay-button { font-size: 16px; padding: 14px; }
+            .logo h1 { font-size: 24px; }
+            .logo .subtitle { font-size: 14px; }
+            .form-group input { padding: 14px; font-size: 16px; }
+            .form-group label { font-size: 13px; }
+            .footer { font-size: 11px; }
+        }
+
+        /* Extra small phones */
+        @media (max-width: 420px) {
+            body { padding: 14px; }
+            .payment-container { padding: 22px 16px; border-radius: 14px; }
+            .payment-amount { padding: 16px; }
+            .amount-label { font-size: 12px; }
+            .amount-value { font-size: 26px; }
+            .provider-cards { gap: 8px; }
+            .provider-card { padding: 10px; }
+            .provider-logo { width: 36px; height: 36px; }
+            .provider-text { font-size: 12.5px; }
+            .phone-prefix { left: 12px; }
+            .phone-input input { padding-left: 46px; }
+            .pay-button { padding: 13px; font-size: 15px; }
+        }
+
+        /* Very small devices */
+        @media (max-width: 360px) {
+            .logo h1 { font-size: 20px; }
+            .logo .subtitle { font-size: 12px; }
+            .amount-value { font-size: 24px; }
+            .provider-text { font-size: 12px; }
+            .pay-button { padding: 12px; font-size: 14px; }
         }
     </style>
 </head>
 <body>
     <div class="payment-container">
         <div class="logo">
-            <h1>Paygator</h1>
+            <h1>Nebula Payments</h1>
             <div class="subtitle">Gateway de Pagamento Seguro</div>
         </div>
 
@@ -353,12 +377,24 @@
             </div>
         </div>
 
-        <div class="mpesa-info">
-            <div class="mpesa-logo">M</div>
-            <div class="mpesa-text">
-                Pagamento via M-Pesa (Simulação)<br>
-                <strong>Confirmação automática em 5 segundos</strong><br>
-                <small>Esta é uma demonstração do sistema</small>
+        <div class="helper-note">
+            Suportamos M-Pesa e e-Mola. Detectamos automaticamente pelo prefixo do seu número.
+            <br><small>84/85 → M-Pesa, 86/87 → e-Mola</small>
+        </div>
+        <div class="provider-cards" id="providerCards">
+            <div class="provider-card" id="card-mpesa" data-provider="mpesa">
+                <div class="provider-logo mpesa"><img src="/images/mpesa.png" alt="M-Pesa" loading="lazy"></div>
+                <div class="provider-text">
+                    M-Pesa<br>
+                    <small>Para números 84 e 85</small>
+                </div>
+            </div>
+            <div class="provider-card" id="card-emola" data-provider="emola">
+                <div class="provider-logo emola"><img src="/images/emola.webp" alt="e-Mola" loading="lazy"></div>
+                <div class="provider-text">
+                    e-Mola<br>
+                    <small>Para números 86 e 87</small>
+                </div>
             </div>
         </div>
 
@@ -382,7 +418,7 @@
             </div>
 
             <button type="button" class="pay-button" id="payButton">
-                🧪 Simular Pagamento M-Pesa
+                <span id="payLabel">Pagar</span>
                 <span class="loading" id="loading">
                     <span class="spinner"></span>
                 </span>
@@ -390,11 +426,10 @@
         </form>
 
         <div class="footer">
-            <p>Pagamento processado com segurança pela Paygator</p>
-            <p>© 2024 Paygator. Todos os direitos reservados.</p>
+            <p>Pagamento processado com segurança pela Nebula Payments</p>
+            <p>© 2024 Nebula Payments. Todos os direitos reservados.</p>
             <div style="margin-top: 15px;">
-                <button onclick="testStaticFiles()" style="margin: 5px; padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">🔧 Test Static Files</button>
-                <button onclick="confirmPaymentManually()" style="margin: 5px; padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">✅ Confirmar Pagamento</button>
+            
             </div>
         </div>
     </div>
@@ -420,8 +455,8 @@
         }
     </script>
 
-    <!-- JavaScript externo -->
-    <script src="/js/payment-form.js"></script>
+    <!-- JavaScript externo (cache-busting em dev) -->
+    <script src="/js/payment-form.js?v=<%= Date.now() %>"></script>
     
     <!-- Error handling para JavaScript -->
     <script>
