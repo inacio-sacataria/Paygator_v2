@@ -28,12 +28,12 @@ const createPaymentSchema = Joi.object({
     phone: Joi.string().optional(),
     name: Joi.string().optional(),
     billingAddress: Joi.object({
-      countryCode: Joi.string().optional(),
-      stateCode: Joi.string().optional(),
-      city: Joi.string().optional(),
-      postcode: Joi.string().optional(),
-      street1: Joi.string().optional(),
-      street2: Joi.string().optional().allow('')
+      countryCode: Joi.string().optional().allow('', null),
+      stateCode: Joi.string().optional().allow('', null),
+      city: Joi.string().optional().allow('', null),
+      postcode: Joi.string().optional().allow('', null),
+      street1: Joi.string().optional().allow('', null),
+      street2: Joi.string().optional().allow('', null)
     }).unknown(true).optional(), // Allow unknown fields in billingAddress
     external: Joi.object({
       id: Joi.string().optional(),
