@@ -205,10 +205,10 @@ class App {
       
       let staticFilesConfigured = false;
       
+      // Configure ALL existing static paths to allow graceful fallback between dist/public and public
       for (const staticPath of possiblePaths) {
         if (setupStaticFiles(staticPath, `production path: ${staticPath}`)) {
           staticFilesConfigured = true;
-          break;
         }
       }
       
@@ -377,6 +377,64 @@ class App {
           searchedPaths: possiblePaths
         });
       }
+    });
+
+    // Fallback route para servir imagens (png, jpg, jpeg, webp, svg)
+    this.app.get('/images/:filename', (req, res) => {
+      const fs = require('fs');
+      const path = require('path');
+      const filename = req.params.filename;
+      const possiblePaths = [
+        path.join(process.cwd(), 'public', 'images', filename),
+        path.join(process.cwd(), 'dist', 'public', 'images', filename),
+        path.join(__dirname, '..', 'public', 'images', filename),
+        path.join(__dirname, '..', '..', 'public', 'images', filename)
+      ];
+
+      let fileFound = false;
+      for (const filePath of possiblePaths) {
+        if (fs.existsSync(filePath)) {
+          // Best-effort content type
+          if (filename.endsWith('.png')) res.setHeader('Content-Type', 'image/png');
+          else if (filename.endsWith('.webp')) res.setHeader('Content-Type', 'image/webp');
+          else if (filename.endsWith('.jpg') || filename.endsWith('.jpeg')) res.setHeader('Content-Type', 'image/jpeg');
+          else if (filename.endsWith('.svg')) res.setHeader('Content-Type', 'image/svg+xml');
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          res.sendFile(filePath);
+          fileFound = true;
+          break;
+        }
+      }
+
+      if (!fileFound) {
+        res.status(404).json({
+          success: false,
+          message: 'Image file not found',
+          filename,
+          searchedPaths: possiblePaths
+        });
+      }
+    });
+
+    // Favicon handler to avoid 404 noise
+    this.app.get('/favicon.ico', (req, res) => {
+      const fs = require('fs');
+      const path = require('path');
+      const possibleFavicons = [
+        path.join(process.cwd(), 'public', 'favicon.ico'),
+        path.join(process.cwd(), 'dist', 'public', 'favicon.ico'),
+        path.join(__dirname, '..', 'public', 'favicon.ico'),
+        path.join(__dirname, '..', '..', 'public', 'favicon.ico')
+      ];
+      for (const iconPath of possibleFavicons) {
+        if (fs.existsSync(iconPath)) {
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          res.sendFile(iconPath);
+          return;
+        }
+      }
+      // No favicon available - send 204 to avoid 404s in console
+      res.status(204).end();
     });
 
     // Test route para verificar se arquivos estáticos estão funcionando
