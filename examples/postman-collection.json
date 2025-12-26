@@ -1,0 +1,137 @@
+{
+  "info": {
+    "name": "Paygator Payment API",
+    "description": "Collection para testar endpoints de pagamento",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "main_4c614d6eb046010889a8eaba36efc8e930c9656e9a4f6c553ca9cc667b267e1e",
+      "type": "string"
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Criar Pagamento",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount\": 100.50,\n  \"currency\": \"MZN\",\n  \"customer\": {\n    \"email\": \"cliente@exemplo.com\",\n    \"phone\": \"+258841234567\",\n    \"name\": \"João Silva\"\n  },\n  \"paymentMethod\": \"mobile_money\",\n  \"locale\": \"pt-MZ\",\n  \"returnUrl\": \"https://seusite.com/pagamento-sucesso\",\n  \"orderDetails\": {\n    \"orderId\": \"ORD-12345\",\n    \"public\": {\n      \"vendorId\": \"vendor-001\",\n      \"vendorName\": \"Minha Loja\",\n      \"cartTotal\": 100.50\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/create",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "create"]
+        },
+        "description": "Cria um novo pagamento e retorna um link para o formulário de pagamento"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    const jsonData = pm.response.json();",
+              "    if (jsonData.externalPayment && jsonData.externalPayment.id) {",
+              "        // Extrair paymentId do link",
+              "        const link = jsonData.link;",
+              "        const match = link.match(/payment-form\\/([^\\/]+)/);",
+              "        if (match && match[1]) {",
+              "            pm.collectionVariables.set('paymentId', match[1]);",
+              "            console.log('PaymentId salvo:', match[1]);",
+              "        }",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Processar Pagamento Emola",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"paymentId\": \"{{paymentId}}\",\n  \"phone\": \"+258861234567\",\n  \"amount\": 100.50,\n  \"currency\": \"MZN\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/process-emola",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "process-emola"]
+        },
+        "description": "Processa um pagamento usando Emola (números começando com 86 ou 87)"
+      }
+    },
+    {
+      "name": "3. Processar Pagamento M-Pesa",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"paymentId\": \"{{paymentId}}\",\n  \"phone\": \"+258841234567\",\n  \"amount\": 100.50,\n  \"currency\": \"MZN\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/process-mpesa",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "process-mpesa"]
+        },
+        "description": "Processa um pagamento usando M-Pesa (números começando com 84 ou 85)"
+      }
+    },
+    {
+      "name": "4. Verificar Status do Pagamento",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "payments", "{{paymentId}}", "status"]
+        },
+        "description": "Verifica o status atual de um pagamento"
+      }
+    }
+  ]
+}
+

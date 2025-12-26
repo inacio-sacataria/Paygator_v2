@@ -1,0 +1,25 @@
+{
+  "amount": 100.50,
+  "currency": "MZN",
+  "customer": {
+    "email": "cliente@exemplo.com",
+    "phone": "+258841234567",
+    "name": "João Silva"
+  },
+  "paymentMethod": "mobile_money",
+  "locale": "pt-MZ",
+  "returnUrl": "https://seusite.com/pagamento-sucesso",
+  "orderDetails": {
+    "orderId": "ORD-12345",
+    "public": {
+      "vendorId": "vendor-001",
+      "vendorName": "Minha Loja",
+      "cartTotal": 100.50,
+      "deliveryTotal": 0,
+      "taxTotal": 0,
+      "serviceFeeTotal": 0,
+      "discountTotal": 0
+    }
+  }
+}
+

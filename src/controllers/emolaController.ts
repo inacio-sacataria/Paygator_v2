@@ -2,8 +2,22 @@ import { Request, Response } from 'express';
 import { logger } from '../utils/logger';
 import { sqliteService } from '../services/sqliteService';
 import { AuthenticatedRequest } from '../middleware/logging';
+import { E2PaymentsService } from '../services/e2paymentsService';
+import { config } from '../config/environment';
 
 export class EmolaController {
+  private e2paymentsService: E2PaymentsService;
+
+  constructor() {
+    // Inicializar serviço E2Payments
+    this.e2paymentsService = new E2PaymentsService({
+      clientId: config.e2payments.clientId,
+      clientSecret: config.e2payments.clientSecret,
+      apiUrl: config.e2payments.apiUrl,
+      emolaWallet: config.e2payments.emolaWallet,
+    });
+  }
+
   public processEmolaPayment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { paymentId, phone, amount, currency } = req.body;
@@ -18,10 +32,12 @@ export class EmolaController {
         return;
       }
 
-      if (!phone.match(/^\+258[0-9]{9}$/)) {
+      // Validar formato do telefone (deve começar com 86 ou 87 para Emola)
+      const phoneNumber = phone.replace(/^\+258/, ''); // Remover prefixo +258 se presente
+      if (!phoneNumber.match(/^(86|87)[0-9]{7}$/)) {
         res.status(400).json({
           success: false,
-          message: 'Formato de telefone inválido. Use: +258XXXXXXXXX',
+          message: 'Formato de telefone inválido para Emola. Use número começando com 86 ou 87',
           timestamp: new Date().toISOString(),
           correlation_id: req.correlationId || 'unknown'
         });
@@ -68,14 +84,12 @@ export class EmolaController {
         return;
       }
 
-      const emolaTransactionId = `emola_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
+      // Atualizar status para processing
       await sqliteService.updatePayment(paymentId, {
         status: 'processing',
         metadata: JSON.stringify({
           ...JSON.parse(existingPayment.metadata || '{}'),
           emola: {
-            transactionId: emolaTransactionId,
             phone: phone,
             status: 'initiated',
             initiatedAt: new Date().toISOString(),
@@ -85,71 +99,92 @@ export class EmolaController {
         })
       });
 
-      logger.info('Payment updated successfully for e-Mola processing', {
-        correlationId: req.correlationId,
-        paymentId,
-        emolaTransactionId
+      // Gerar referência (máximo 27 caracteres)
+      const reference = existingPayment.metadata 
+        ? JSON.parse(existingPayment.metadata).reference || `PAYMENT_${paymentId.substring(0, 20)}`
+        : `PAYMENT_${paymentId.substring(0, 20)}`;
+
+      // Processar pagamento com E2Payments
+      const paymentResult = await this.e2paymentsService.processEmolaPayment({
+        phone: phoneNumber, // Usar número sem prefixo +258
+        amount: amount,
+        reference: reference.substring(0, 27),
       });
 
-      logger.info('e-Mola payment initiated successfully', {
-        correlationId: req.correlationId,
-        paymentId,
-        emolaTransactionId,
-        phone
-      });
+      if (paymentResult.success) {
+        // Atualizar pagamento com sucesso
+        await sqliteService.updatePayment(paymentId, {
+          status: 'completed',
+          metadata: JSON.stringify({
+            ...JSON.parse(existingPayment.metadata || '{}'),
+            emola: {
+              ...JSON.parse(existingPayment.metadata || '{}').emola,
+              transactionId: paymentResult.transactionId || `emola_${Date.now()}`,
+              status: 'completed',
+              completedAt: new Date().toISOString(),
+              reference: reference,
+              responseData: paymentResult.data,
+            }
+          })
+        });
 
-      setTimeout(async () => {
-        try {
-          logger.info('Simulating automatic e-Mola payment confirmation', {
-            correlationId: req.correlationId,
-            paymentId,
-            emolaTransactionId
-          });
+        logger.info('e-Mola payment processed successfully', {
+          correlationId: req.correlationId,
+          paymentId,
+          transactionId: paymentResult.transactionId,
+          phone
+        });
 
-          await sqliteService.updatePayment(paymentId, {
+        res.status(200).json({
+          success: true,
+          message: 'Pagamento e-Mola processado com sucesso',
+          data: {
+            transactionId: paymentResult.transactionId,
             status: 'completed',
-            metadata: JSON.stringify({
-              ...JSON.parse(existingPayment.metadata || '{}'),
-              emola: {
-                ...JSON.parse(existingPayment.metadata || '{}').emola,
-                status: 'completed',
-                completedAt: new Date().toISOString(),
-                autoConfirmed: true,
-                confirmedAt: new Date().toISOString()
-              }
-            })
-          });
+            reference: reference,
+          },
+          timestamp: new Date().toISOString(),
+          correlation_id: req.correlationId || 'unknown'
+        });
+      } else {
+        // Atualizar pagamento com falha
+        await sqliteService.updatePayment(paymentId, {
+          status: 'failed',
+          metadata: JSON.stringify({
+            ...JSON.parse(existingPayment.metadata || '{}'),
+            emola: {
+              ...JSON.parse(existingPayment.metadata || '{}').emola,
+              status: 'failed',
+              failedAt: new Date().toISOString(),
+              error: paymentResult.message,
+              responseData: paymentResult.data,
+            }
+          })
+        });
 
-          logger.info('Payment automatically confirmed as completed (e-Mola)', {
-            correlationId: req.correlationId,
-            paymentId,
-            status: 'completed'
-          });
-        } catch (error) {
-          logger.error('Error in automatic e-Mola payment confirmation', {
-            correlationId: req.correlationId,
-            paymentId,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-        }
-      }, 5000);
+        logger.warn('e-Mola payment failed', {
+          correlationId: req.correlationId,
+          paymentId,
+          error: paymentResult.message,
+        });
 
-      res.status(200).json({
-        success: true,
-        message: 'Pagamento e-Mola iniciado com sucesso',
-        data: {
-          transactionId: emolaTransactionId,
-          status: 'processing',
-          message: 'Verifique seu telefone para confirmar o pagamento'
-        },
-        timestamp: new Date().toISOString(),
-        correlation_id: req.correlationId || 'unknown'
-      });
+        res.status(400).json({
+          success: false,
+          message: paymentResult.message || 'Falha ao processar pagamento e-Mola',
+          data: {
+            status: 'failed',
+            error: paymentResult.message,
+          },
+          timestamp: new Date().toISOString(),
+          correlation_id: req.correlationId || 'unknown'
+        });
+      }
 
     } catch (error) {
       logger.error('Error processing e-Mola payment', {
         correlationId: req.correlationId,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       res.status(500).json({

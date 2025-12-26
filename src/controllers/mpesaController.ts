@@ -2,8 +2,21 @@ import { Request, Response } from 'express';
 import { logger } from '../utils/logger';
 import { sqliteService } from '../services/sqliteService';
 import { AuthenticatedRequest } from '../middleware/logging';
+import { TheCodeService } from '../services/thecodeService';
+import { config } from '../config/environment';
 
 export class MpesaController {
+  private thecodeService: TheCodeService;
+
+  constructor() {
+    // Inicializar serviço TheCode
+    this.thecodeService = new TheCodeService({
+      clientId: config.thecode.clientId,
+      clientSecret: config.thecode.clientSecret,
+      mpesaWallet: config.thecode.mpesaWallet,
+    });
+  }
+
   public processMpesaPayment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { paymentId, phone, amount, currency } = req.body;
@@ -19,11 +32,12 @@ export class MpesaController {
         return;
       }
 
-      // Validar formato do telefone
-      if (!phone.match(/^\+258[0-9]{9}$/)) {
+      // Validar formato do telefone (deve começar com 84 ou 85 para M-Pesa)
+      const phoneNumber = phone.replace(/^\+258/, ''); // Remover prefixo +258 se presente
+      if (!phoneNumber.match(/^(84|85)[0-9]{7}$/)) {
         res.status(400).json({
           success: false,
-          message: 'Formato de telefone inválido. Use: +258XXXXXXXXX',
+          message: 'Formato de telefone inválido para M-Pesa. Use número começando com 84 ou 85',
           timestamp: new Date().toISOString(),
           correlation_id: req.correlationId || 'unknown'
         });
@@ -72,16 +86,12 @@ export class MpesaController {
         return;
       }
 
-      // Simular processamento M-Pesa
-      const mpesaTransactionId = `mpesa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Atualizar pagamento com informações M-Pesa
+      // Atualizar status para processing
       await sqliteService.updatePayment(paymentId, {
         status: 'processing',
         metadata: JSON.stringify({
           ...JSON.parse(existingPayment.metadata || '{}'),
           mpesa: {
-            transactionId: mpesaTransactionId,
             phone: phone,
             status: 'initiated',
             initiatedAt: new Date().toISOString(),
@@ -91,75 +101,102 @@ export class MpesaController {
         })
       });
 
-      logger.info('Payment updated successfully for M-Pesa processing', {
+      // Gerar referência única (máximo 15 caracteres para M-Pesa)
+      // A referência deve ser única para cada transação e não pode ser reutilizada
+      // Usar timestamp + hash do paymentId para garantir unicidade
+      const timestamp = Date.now().toString().slice(-8); // Últimos 8 dígitos do timestamp
+      const paymentHash = paymentId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 6); // Primeiros 6 caracteres alfanuméricos
+      const reference = `MP${timestamp}${paymentHash}`.substring(0, 15); // Máximo 15 caracteres
+
+      logger.info('M-Pesa - Referência gerada', {
         correlationId: req.correlationId,
         paymentId,
-        mpesaTransactionId
+        reference,
+        referenceLength: reference.length
       });
 
-      // Simular envio de notificação M-Pesa
-      logger.info('M-Pesa payment initiated successfully', {
-        correlationId: req.correlationId,
-        paymentId,
-        mpesaTransactionId,
-        phone
+      // Processar pagamento com TheCode
+      const paymentResult = await this.thecodeService.processMpesaPayment({
+        phone: phoneNumber, // Usar número sem prefixo +258
+        amount: amount,
+        reference: reference,
       });
 
-      // Simular confirmação automática do pagamento após 5 segundos
-      setTimeout(async () => {
-        try {
-          logger.info('Simulating automatic M-Pesa payment confirmation', {
-            correlationId: req.correlationId,
-            paymentId,
-            mpesaTransactionId
-          });
+      if (paymentResult.success) {
+        // Atualizar pagamento com sucesso
+        await sqliteService.updatePayment(paymentId, {
+          status: 'completed',
+          metadata: JSON.stringify({
+            ...JSON.parse(existingPayment.metadata || '{}'),
+            mpesa: {
+              ...JSON.parse(existingPayment.metadata || '{}').mpesa,
+              transactionId: paymentResult.transactionId || `mpesa_${Date.now()}`,
+              status: 'completed',
+              completedAt: new Date().toISOString(),
+              reference: reference,
+              responseData: paymentResult.data,
+            }
+          })
+        });
 
-          // Atualizar status para completed
-          await sqliteService.updatePayment(paymentId, {
+        logger.info('M-Pesa payment processed successfully', {
+          correlationId: req.correlationId,
+          paymentId,
+          transactionId: paymentResult.transactionId,
+          phone
+        });
+
+        // Retornar sucesso
+        res.status(200).json({
+          success: true,
+          message: 'Pagamento M-Pesa processado com sucesso',
+          data: {
+            transactionId: paymentResult.transactionId,
             status: 'completed',
-            metadata: JSON.stringify({
-              ...JSON.parse(existingPayment.metadata || '{}'),
-              mpesa: {
-                ...JSON.parse(existingPayment.metadata || '{}').mpesa,
-                status: 'completed',
-                completedAt: new Date().toISOString(),
-                autoConfirmed: true,
-                confirmedAt: new Date().toISOString()
-              }
-            })
-          });
+            reference: reference,
+          },
+          timestamp: new Date().toISOString(),
+          correlation_id: req.correlationId || 'unknown'
+        });
+      } else {
+        // Atualizar pagamento com falha
+        await sqliteService.updatePayment(paymentId, {
+          status: 'failed',
+          metadata: JSON.stringify({
+            ...JSON.parse(existingPayment.metadata || '{}'),
+            mpesa: {
+              ...JSON.parse(existingPayment.metadata || '{}').mpesa,
+              status: 'failed',
+              failedAt: new Date().toISOString(),
+              error: paymentResult.message,
+              responseData: paymentResult.data,
+            }
+          })
+        });
 
-          logger.info('Payment automatically confirmed as completed', {
-            correlationId: req.correlationId,
-            paymentId,
-            status: 'completed'
-          });
-        } catch (error) {
-          logger.error('Error in automatic payment confirmation', {
-            correlationId: req.correlationId,
-            paymentId,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
-        }
-      }, 5000); // 5 segundos
+        logger.warn('M-Pesa payment failed', {
+          correlationId: req.correlationId,
+          paymentId,
+          error: paymentResult.message,
+        });
 
-      // Retornar sucesso
-      res.status(200).json({
-        success: true,
-        message: 'Pagamento M-Pesa iniciado com sucesso',
-        data: {
-          transactionId: mpesaTransactionId,
-          status: 'processing',
-          message: 'Verifique seu telefone para confirmar o pagamento'
-        },
-        timestamp: new Date().toISOString(),
-        correlation_id: req.correlationId || 'unknown'
-      });
+        res.status(400).json({
+          success: false,
+          message: paymentResult.message || 'Falha ao processar pagamento M-Pesa',
+          data: {
+            status: 'failed',
+            error: paymentResult.message,
+          },
+          timestamp: new Date().toISOString(),
+          correlation_id: req.correlationId || 'unknown'
+        });
+      }
 
     } catch (error) {
       logger.error('Error processing M-Pesa payment', {
         correlationId: req.correlationId,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       res.status(500).json({

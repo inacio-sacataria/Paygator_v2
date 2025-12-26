@@ -100,4 +100,17 @@ export const config = {
     paymentProviderUrl: process.env['PAYMENT_PROVIDER_URL'],
     paymentProviderApiKey: process.env['PAYMENT_PROVIDER_API_KEY'],
   },
+  // E2Payments Configuration (Emola)
+  e2payments: {
+    clientId: process.env['E2PAYMENTS_CLIENT_ID'] || '',
+    clientSecret: process.env['E2PAYMENTS_CLIENT_SECRET'] || '',
+    apiUrl: process.env['E2PAYMENTS_API_URL'] || 'https://e2payments.explicador.co.mz',
+    emolaWallet: process.env['E2PAYMENTS_EMOLA_WALLET'] || '',
+  },
+  // TheCode Configuration (M-Pesa)
+  thecode: {
+    clientId: process.env['THECODE_CLIENT_ID'] || '',
+    clientSecret: process.env['THECODE_CLIENT_SECRET'] || '',
+    mpesaWallet: process.env['THECODE_MPESA_WALLET'] || '',
+  },
 } as const; 
