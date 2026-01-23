@@ -8,7 +8,7 @@ Este guia mostra como testar os endpoints de pagamento implementados.
    ```env
    E2PAYMENTS_CLIENT_ID=98ce725a-544b-4841-9304-74efef98534e
    E2PAYMENTS_CLIENT_SECRET=14bOAVyBNAcwp6qRK2aRwrDO1z7fjqSWUdEPL03J
-   E2PAYMENTS_API_URL=https://e2payments.explicador.co.mz
+   E2PAYMENTS_API_URL=https://mpesaemolatech.com
    E2PAYMENTS_EMOLA_WALLET=989488
 
    THECODE_CLIENT_ID=98cd2d3b-5e4f-42e0-8c93-d01fc871b858

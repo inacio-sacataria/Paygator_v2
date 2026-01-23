@@ -15,6 +15,18 @@ const paymentController = new PaymentController();
 const mpesaController = new MpesaController();
 const emolaController = new EmolaController();
 
+// Middleware de debug para todas as rotas de pagamento
+router.use((req, res, next) => {
+  console.log('[PAYMENT ROUTES] Request received', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl
+  });
+  next();
+});
+
 // Schema de validação para criar pagamento - apenas amount é obrigatório
 const createPaymentSchema = Joi.object({
   paymentId: Joi.string().optional(),
@@ -449,6 +461,15 @@ router.post('/mpesa-callback',
  *         description: Internal server error
  */
 router.post('/process-emola',
+  (req, res, next) => {
+    console.log('[ROUTE] /process-emola called', {
+      method: req.method,
+      url: req.url,
+      path: req.path,
+      originalUrl: req.originalUrl
+    });
+    next();
+  },
   emolaController.processEmolaPayment
 );
 
@@ -492,6 +513,132 @@ router.post('/process-emola',
  */
 router.post('/emola-callback',
   emolaController.simulateEmolaCallback
+);
+
+/**
+ * @swagger
+ * /api/v1/payments/process-emola-b2c:
+ *   post:
+ *     summary: Process e-Mola B2C payment
+ *     description: Processes a B2C (Business to Customer) payment using e-Mola mobile money. B2C is used to send money from business to customer.
+ *     tags: [Payments, e-Mola, B2C]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentId
+ *               - phone
+ *               - amount
+ *               - currency
+ *             properties:
+ *               paymentId:
+ *                 type: string
+ *                 description: Payment ID
+ *               phone:
+ *                 type: string
+ *                 description: Phone number in format +258XXXXXXXXX
+ *               amount:
+ *                 type: number
+ *                 description: Payment amount
+ *               currency:
+ *                 type: string
+ *                 description: Payment currency
+ *     responses:
+ *       200:
+ *         description: e-Mola B2C payment processed successfully
+ *       400:
+ *         description: Bad request - validation error
+ *       404:
+ *         description: Payment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/process-emola-b2c',
+  emolaController.processEmolaB2CPayment
+);
+
+/**
+ * @swagger
+ * /api/v1/payments/emola-b2c-callback:
+ *   post:
+ *     summary: e-Mola B2C callback
+ *     description: Receives callback from e-Mola B2C payment system
+ *     tags: [Payments, e-Mola, B2C]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentId
+ *               - status
+ *               - transactionId
+ *             properties:
+ *               paymentId:
+ *                 type: string
+ *                 description: Payment ID
+ *               status:
+ *                 type: string
+ *                 enum: [success, failed]
+ *                 description: Payment status from e-Mola
+ *               transactionId:
+ *                 type: string
+ *                 description: e-Mola transaction ID
+ *     responses:
+ *       200:
+ *         description: Callback processed successfully
+ *       400:
+ *         description: Bad request - validation error
+ *       404:
+ *         description: Payment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/emola-b2c-callback',
+  emolaController.simulateEmolaB2CCallback
+);
+
+/**
+ * @swagger
+ * /api/v1/payments/process-vendor-b2c:
+ *   post:
+ *     summary: Process vendor B2C payment
+ *     description: Processes a B2C payment to vendor after C2B payment is completed. Calculates system commission and sends net amount to vendor.
+ *     tags: [Payments, e-Mola, B2C, Vendor]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - paymentId
+ *             properties:
+ *               paymentId:
+ *                 type: string
+ *                 description: Payment ID of completed C2B payment
+ *               commissionPercentage:
+ *                 type: number
+ *                 description: System commission percentage (0-100). If not provided, uses vendorShare from payment metadata
+ *               vendorPhone:
+ *                 type: string
+ *                 description: Vendor phone number (optional if configured in vendorMerchant)
+ *     responses:
+ *       200:
+ *         description: Vendor B2C payment processed successfully
+ *       400:
+ *         description: Bad request - validation error
+ *       404:
+ *         description: Payment not found
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/process-vendor-b2c',
+  emolaController.processVendorB2CPayment
 );
 
 /**

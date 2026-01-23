@@ -13,6 +13,8 @@ export class MpesaController {
     this.thecodeService = new TheCodeService({
       clientId: config.thecode.clientId,
       clientSecret: config.thecode.clientSecret,
+      authUrl: config.thecode.authUrl,
+      apiUrl: config.thecode.apiUrl,
       mpesaWallet: config.thecode.mpesaWallet,
     });
   }

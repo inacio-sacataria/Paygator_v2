@@ -1,0 +1,238 @@
+{
+	"info": {
+		"_postman_id": "d0f59db0-b51a-40dd-a46c-3cb7b655cebd",
+		"name": "e2Payments Example",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "27915207"
+	},
+	"item": [
+		{
+			"name": "Requisição do Token",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-Requested-With",
+						"value": "XMLHttpRequest",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "grant_type",
+							"value": "client_credentials",
+							"type": "text"
+						},
+						{
+							"key": "client_id",
+							"value": "",
+							"type": "text"
+						},
+						{
+							"key": "client_secret",
+							"value": "",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "https://mpesaemolatech.com/oauth/token",
+					"protocol": "https",
+					"host": [
+						"e2payments",
+						"explicador",
+						"co",
+						"mz"
+					],
+					"path": [
+						"oauth",
+						"token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Transação C2B eMola",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJ...",
+						"type": "text"
+					},
+					{
+						"key": "X-Requested-With",
+						"value": "XMLHttpRequest",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "client_id",
+							"value": "",
+							"type": "text"
+						},
+						{
+							"key": "amount",
+							"value": "3",
+							"type": "text"
+						},
+						{
+							"key": "reference",
+							"value": "Fact10",
+							"type": "text"
+						},
+						{
+							"key": "phone",
+							"value": "862502502",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "https://mpesaemolatech.com/v1/c2b/emola-payment/123456",
+					"protocol": "https",
+					"host": [
+						"e2payments",
+						"explicador",
+						"co",
+						"mz"
+					],
+					"path": [
+						"v1",
+						"c2b",
+						"emola-payment",
+						"123456"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Transação C2B Mpesa",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJ...",
+						"type": "text"
+					},
+					{
+						"key": "X-Requested-With",
+						"value": "XMLHttpRequest",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "client_id",
+							"value": "",
+							"type": "text"
+						},
+						{
+							"key": "amount",
+							"value": "3",
+							"type": "text"
+						},
+						{
+							"key": "reference",
+							"value": "Fact10",
+							"type": "text"
+						},
+						{
+							"key": "phone",
+							"value": "862502502",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "https://mpesaemolatech.com/v1/c2b/mpesa-payment/123456",
+					"protocol": "https",
+					"host": [
+						"e2payments",
+						"explicador",
+						"co",
+						"mz"
+					],
+					"path": [
+						"v1",
+						"c2b",
+						"mpesa-payment",
+						"123456"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Transação B2C eMola",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJ...",
+						"type": "text"
+					},
+					{
+						"key": "X-Requested-With",
+						"value": "XMLHttpRequest",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "client_id",
+							"value": "",
+							"type": "text"
+						},
+						{
+							"key": "amount",
+							"value": "3",
+							"type": "text"
+						},
+						{
+							"key": "reference",
+							"value": "Fact10",
+							"type": "text"
+						},
+						{
+							"key": "phone",
+							"value": "862502502",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "https://mpesaemolatech.com/v1/b2c/emola-payment/123456",
+					"protocol": "https",
+					"host": [
+						"e2payments",
+						"explicador",
+						"co",
+						"mz"
+					],
+					"path": [
+						"v1",
+						"b2c",
+						"emola-payment",
+						"123456"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

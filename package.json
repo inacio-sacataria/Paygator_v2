@@ -7,6 +7,7 @@
     "build": "tsc && node scripts/copy-views.js",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only --require tsconfig-paths/register src/index.ts",
+    "dev:all": "powershell -ExecutionPolicy Bypass -File start-dev.ps1",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -25,7 +26,10 @@
     "test-migration": "node scripts/migrate-to-render-postgres.js test",
     "render-diagnostic": "node scripts/render-diagnostic.js",
     "setup-sqlite": "node scripts/setup-sqlite.js",
-    "test-sqlite": "npm run build && node scripts/setup-sqlite.js"
+    "test-sqlite": "npm run build && node scripts/setup-sqlite.js",
+    "clear-db": "node scripts/clear-database.js",
+    "clear-sqlite": "node scripts/clear-sqlite.js",
+    "clear-all": "node scripts/clear-all-databases.js"
   },
   "keywords": [
     "webhook",

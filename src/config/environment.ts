@@ -92,9 +92,9 @@ export const config = {
     metricsPort: parseInt(process.env['METRICS_PORT'] || '9090', 10),
   },
   cors: {
-    allowedOrigins: process.env['ALLOWED_ORIGINS']?.split(',') || ['http://localhost:3000'],
+    allowedOrigins: process.env['ALLOWED_ORIGINS']?.split(',') || ['http://localhost:3000', 'http://localhost:3001'],
     allowedMethods: process.env['ALLOWED_METHODS']?.split(',') || ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: process.env['ALLOWED_HEADERS']?.split(',') || ['Content-Type', 'Authorization', 'X-API-Key', 'X-Webhook-Signature'],
+    allowedHeaders: process.env['ALLOWED_HEADERS']?.split(',') || ['Content-Type', 'Authorization', 'X-API-Key', 'X-Webhook-Signature', 'X-Requested-With'],
   },
   external: {
     paymentProviderUrl: process.env['PAYMENT_PROVIDER_URL'],
@@ -104,13 +104,16 @@ export const config = {
   e2payments: {
     clientId: process.env['E2PAYMENTS_CLIENT_ID'] || '',
     clientSecret: process.env['E2PAYMENTS_CLIENT_SECRET'] || '',
-    apiUrl: process.env['E2PAYMENTS_API_URL'] || 'https://e2payments.explicador.co.mz',
+    authUrl: process.env['E2PAYMENTS_AUTH_URL'] || 'https://mpesaemolatech.com', // URL para autenticação (token)
+    apiUrl: process.env['E2PAYMENTS_API_URL'] || 'https://mpesaemolatech.com', // URL para transações
     emolaWallet: process.env['E2PAYMENTS_EMOLA_WALLET'] || '',
   },
   // TheCode Configuration (M-Pesa)
   thecode: {
     clientId: process.env['THECODE_CLIENT_ID'] || '',
     clientSecret: process.env['THECODE_CLIENT_SECRET'] || '',
+    authUrl: process.env['E2PAYMENTS_AUTH_URL'] || 'https://mpesaemolatech.com', // URL para autenticação (token)
+    apiUrl: process.env['E2PAYMENTS_API_URL'] || 'https://mpesaemolatech.com', // URL para transações
     mpesaWallet: process.env['THECODE_MPESA_WALLET'] || '',
   },
 } as const; 

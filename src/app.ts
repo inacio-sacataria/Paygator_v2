@@ -230,11 +230,27 @@ class App {
       secret: process.env['SESSION_SECRET'] || 'paygator-secret',
       resave: false,
       saveUninitialized: false,
-      cookie: { secure: false } // true se usar HTTPS
+      cookie: { 
+        secure: false, // true se usar HTTPS
+        httpOnly: true,
+        sameSite: 'lax', // Permite cookies em requisições cross-origin do mesmo site
+        maxAge: 24 * 60 * 60 * 1000 // 24 horas
+      }
     }));
   }
 
   private initializeRoutes(): void {
+    // Middleware de debug global para TODAS as requisições
+    this.app.use((req, res, next) => {
+      console.log('[APP] Request received', {
+        method: req.method,
+        url: req.url,
+        path: req.path,
+        originalUrl: req.originalUrl,
+        baseUrl: req.baseUrl
+      });
+      next();
+    });
     // Health check
     this.app.get('/health', (req, res) => {
       res.status(200).json({
@@ -565,14 +581,31 @@ class App {
     // API routes - PlayFood específico
     this.app.use(`/api/${config.server.apiVersion}/playfood`, playfoodRoutes);
 
-    // API routes - Pagamentos
-    this.app.use(`/api/${config.server.apiVersion}/payments`, paymentRoutes);
+    // API routes - Pagamentos (DEVE vir ANTES de playfoodPaymentRoutes)
+    // IMPORTANTE: Esta rota específica deve vir ANTES da rota genérica
+    console.log('[APP] Registering paymentRoutes at:', `/api/${config.server.apiVersion}/payments`);
+    this.app.use(`/api/${config.server.apiVersion}/payments`, (req, res, next) => {
+      console.log('[APP] Payment route matched:', req.method, req.path, req.originalUrl);
+      next();
+    }, paymentRoutes);
 
     // Rotas para formulário de pagamento interno
     this.app.use('/payment-form', paymentFormRoutes);
 
     // API routes - PlayFood Payment Provider (API completa)
-    this.app.use(`/api/${config.server.apiVersion}`, playfoodPaymentRoutes);
+    // IMPORTANTE: Esta rota é mais genérica (/api/v1), então deve vir DEPOIS das rotas específicas
+    // Mas NÃO deve capturar /api/v1/payments/* porque paymentRoutes já captura isso
+    // Adicionar middleware para evitar capturar rotas de payments
+    this.app.use(`/api/${config.server.apiVersion}`, (req, res, next) => {
+      // Se for uma rota de payments, não processar aqui (já foi processado por paymentRoutes)
+      if (req.path && req.path.startsWith('/payments/')) {
+        console.log('[APP] Skipping playfoodPaymentRoutes for payments route:', req.path);
+        // Se chegou aqui, significa que paymentRoutes não processou, então vai para 404
+        return next();
+      }
+      // Para outras rotas, processar normalmente
+      next();
+    }, playfoodPaymentRoutes);
 
     // 404 handler
     this.app.use('*', (req, res) => {

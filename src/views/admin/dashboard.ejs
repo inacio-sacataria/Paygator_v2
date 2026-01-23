@@ -377,7 +377,206 @@
           <p class="action-description">Revisar pagamentos aguardando</p>
         </div>
       </div>
+
+      <!-- Seção B2C Payment ao Vendor -->
+      <div class="b2c-section" style="margin-top: 2rem; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem;">Pagar Vendor (B2C com Comissão)</h2>
+        <p style="color: #64748b; margin-bottom: 1.5rem; font-size: 0.875rem;">
+          Após um pagamento C2B ser completado, use esta ferramenta para pagar o vendor. 
+          O sistema calcula automaticamente a comissão baseada no vendorShare do pagamento original.
+        </p>
+        <form id="vendor-b2c-form" style="display: grid; gap: 1rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 500; color: #334155; margin-bottom: 0.5rem;">Payment ID (C2B Completo)</label>
+              <input type="text" id="vendor-b2c-paymentId" name="paymentId" required 
+                     value="<%= typeof queryParams !== 'undefined' && queryParams.paymentId ? queryParams.paymentId : '' %>"
+                     style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.875rem;"
+                     placeholder="ID do pagamento C2B completado">
+            </div>
+            <div>
+              <label style="display: block; font-weight: 500; color: #334155; margin-bottom: 0.5rem;">Comissão do Sistema (%)</label>
+              <input type="number" id="vendor-b2c-commission" name="commissionPercentage" step="0.1" min="0" max="100"
+                     value="<%= typeof queryParams !== 'undefined' && queryParams.commissionPercentage ? queryParams.commissionPercentage : '' %>"
+                     style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.875rem;"
+                     placeholder="Deixe vazio para usar vendorShare do pagamento">
+              <small style="color: #64748b; font-size: 0.75rem;">Opcional: Se não informado, usa o vendorShare do pagamento original</small>
+            </div>
+          </div>
+          <div>
+            <label style="display: block; font-weight: 500; color: #334155; margin-bottom: 0.5rem;">Telefone do Vendor (Opcional)</label>
+            <input type="text" id="vendor-b2c-phone" name="vendorPhone" 
+                   value="<%= typeof queryParams !== 'undefined' && queryParams.vendorPhone ? queryParams.vendorPhone : '' %>"
+                   style="width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.875rem;"
+                   placeholder="+258862502502 (opcional se configurado no vendorMerchant)">
+            <small style="color: #64748b; font-size: 0.75rem;">Opcional: Se não informado, usa o telefone do vendorMerchant do pagamento</small>
+          </div>
+          <div>
+            <button type="button" id="vendor-b2c-submit" onclick="processVendorB2C()"
+                    style="padding: 0.75rem 1.5rem; background: #16a34a; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+              Pagar Vendor (B2C)
+            </button>
+          </div>
+          <div id="vendor-b2c-result" style="margin-top: 1rem; padding: 1rem; border-radius: 6px; display: none;"></div>
+        </form>
+      </div>
     </main>
   </div>
+
+  <script>
+    // Função para preencher campos com parâmetros da URL
+    function fillFormFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentId = urlParams.get('paymentId');
+      const commissionPercentage = urlParams.get('commissionPercentage');
+      const vendorPhone = urlParams.get('vendorPhone');
+
+      if (paymentId) {
+        const field = document.getElementById('vendor-b2c-paymentId');
+        if (field) field.value = paymentId;
+      }
+      if (commissionPercentage) {
+        const field = document.getElementById('vendor-b2c-commission');
+        if (field) field.value = commissionPercentage;
+      }
+      if (vendorPhone) {
+        const field = document.getElementById('vendor-b2c-phone');
+        if (field) field.value = decodeURIComponent(vendorPhone);
+      }
+    }
+
+    // Preencher campos quando a página carregar
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fillFormFromURL);
+    } else {
+      fillFormFromURL();
+    }
+
+    // Função para processar o pagamento B2C ao vendor
+    async function processVendorB2C() {
+      console.log('=== INICIANDO PROCESSAMENTO B2C VENDOR ===');
+      
+      const submitBtn = document.getElementById('vendor-b2c-submit');
+      const resultDiv = document.getElementById('vendor-b2c-result');
+      
+      if (!submitBtn || !resultDiv) {
+        alert('Erro: Elementos do formulário não encontrados.');
+        return;
+      }
+
+      // Obter valores dos campos
+      const paymentIdField = document.getElementById('vendor-b2c-paymentId');
+      const commissionField = document.getElementById('vendor-b2c-commission');
+      const phoneField = document.getElementById('vendor-b2c-phone');
+
+      if (!paymentIdField) {
+        alert('Erro: Campo Payment ID não encontrado.');
+        return;
+      }
+
+      const paymentId = paymentIdField.value.trim();
+      if (!paymentId) {
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = '#fee2e2';
+        resultDiv.style.color = '#dc2626';
+        resultDiv.innerHTML = '<strong>Erro:</strong> Payment ID é obrigatório.';
+        return;
+      }
+
+      const commissionValue = commissionField ? commissionField.value.trim() : '';
+      const vendorPhoneValue = phoneField ? phoneField.value.trim() : '';
+
+      const formData = {
+        paymentId: paymentId,
+        commissionPercentage: commissionValue ? parseFloat(commissionValue) : undefined,
+        vendorPhone: vendorPhoneValue || undefined
+      };
+
+      console.log('Dados a enviar:', formData);
+
+      // Validar comissão se fornecida
+      if (formData.commissionPercentage !== undefined && formData.commissionPercentage !== null) {
+        if (isNaN(formData.commissionPercentage) || formData.commissionPercentage < 0 || formData.commissionPercentage > 100) {
+          resultDiv.style.display = 'block';
+          resultDiv.style.background = '#fee2e2';
+          resultDiv.style.color = '#dc2626';
+          resultDiv.innerHTML = '<strong>Erro:</strong> Comissão deve estar entre 0 e 100.';
+          return;
+        }
+      }
+
+      // Desabilitar botão e mostrar loading
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processando...';
+      resultDiv.style.display = 'none';
+      try {
+        const apiUrl = '/api/v1/payments/process-vendor-b2c';
+        console.log('Enviando requisição POST para:', apiUrl);
+        console.log('Payload:', JSON.stringify(formData, null, 2));
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData)
+        });
+
+        console.log('Resposta recebida:', response.status, response.statusText);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Erro na resposta:', errorText);
+          throw new Error(`Erro HTTP: ${response.status} - ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Dados recebidos:', data);
+
+        resultDiv.style.display = 'block';
+        
+        if (data.success) {
+          resultDiv.style.background = '#dcfce7';
+          resultDiv.style.color = '#16a34a';
+          resultDiv.innerHTML = `
+            <strong>Sucesso!</strong><br>
+            Pagamento B2C ao vendor processado com sucesso.<br><br>
+            <strong>Detalhes:</strong><br>
+            Transaction ID: ${data.data?.transactionId || 'N/A'}<br>
+            Status: ${data.data?.status || 'N/A'}<br>
+            Reference: ${data.data?.reference || 'N/A'}<br><br>
+            <strong>Valores:</strong><br>
+            Valor Total: MT ${(data.data?.totalAmount / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}<br>
+            Valor ao Vendor: MT ${(data.data?.vendorAmount / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}<br>
+            Comissão do Sistema: ${data.data?.systemCommission || 'N/A'}% (MT ${(data.data?.systemCommissionAmount / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+          `;
+        } else {
+          resultDiv.style.background = '#fee2e2';
+          resultDiv.style.color = '#dc2626';
+          resultDiv.innerHTML = `
+            <strong>Erro:</strong><br>
+            ${data.message || 'Erro ao processar pagamento B2C ao vendor'}<br>
+            ${data.errors ? data.errors.join('<br>') : ''}
+          `;
+        }
+      } catch (error) {
+        console.error('Erro ao processar requisição:', error);
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = '#fee2e2';
+        resultDiv.style.color = '#dc2626';
+        resultDiv.innerHTML = `
+          <strong>Erro:</strong><br>
+          ${error.message || 'Erro de conexão'}<br>
+          <small>Verifique o console do navegador para mais detalhes.</small>
+        `;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Pagar Vendor (B2C)';
+      }
+    }
+
+    // Tornar a função global para poder ser chamada via onclick
+    window.processVendorB2C = processVendorB2C;
+  </script>
 </body>
 </html> 
