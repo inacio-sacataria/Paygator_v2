@@ -3,6 +3,12 @@ import axios from 'axios'
 // Usar URL completa para garantir que vá para o backend
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+// Aviso se a variável não estiver configurada em produção
+if (!import.meta.env.VITE_API_URL && import.meta.env.MODE === 'production') {
+  console.error('[API] ⚠️ VITE_API_URL não está configurada! Configure no Vercel: Settings → Environment Variables');
+  console.error('[API] Usando fallback:', API_BASE_URL);
+}
+
 const api = axios.create({
   baseURL: `${API_BASE_URL}/admin/api`,
   withCredentials: true,

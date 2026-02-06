@@ -38,11 +38,11 @@ services:
       - key: WEBHOOK_RETRY_DELAY_MS
         value: 5000
       - key: ALLOWED_ORIGINS
-        value: https://paygator-api.onrender.com,https://paygator-dashboard.onrender.com,http://localhost:3000,http://localhost:3001
+        value: https://paygator-v2.onrender.com,https://paygator-dashboard.vercel.app,https://paygator-dashboard-*.vercel.app,http://localhost:3000,http://localhost:3001
       - key: ALLOWED_METHODS
         value: GET,POST,PUT,DELETE,OPTIONS
       - key: ALLOWED_HEADERS
-        value: Content-Type,Authorization,X-API-Key,X-Webhook-Signature
+        value: Content-Type,Authorization,X-API-Key,X-Webhook-Signature,X-Requested-With
     healthCheckPath: /health
     autoDeploy: true
 

@@ -17,6 +17,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         // Usar URL completa para garantir que vá para o backend
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+        
+        // Aviso se a variável não estiver configurada em produção
+        if (!import.meta.env.VITE_API_URL && import.meta.env.MODE === 'production') {
+          console.error('[AUTH] ⚠️ VITE_API_URL não está configurada! Configure no Vercel: Settings → Environment Variables');
+        }
         const response = await fetch(`${apiUrl}/admin/api/auth/check`, {
           credentials: 'include',
           headers: {
