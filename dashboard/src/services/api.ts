@@ -52,8 +52,24 @@ export const dashboardApi = {
   },
 
   getPayments: async (filter: PaymentFilter = {}) => {
-    const response = await api.get('/payments', { params: filter })
-    return response.data
+    try {
+      console.log('[API] Fetching payments with filter:', filter)
+      const response = await api.get('/payments', { params: filter })
+      console.log('[API] Payments response status:', response.status)
+      console.log('[API] Payments response data:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('[API] Error fetching payments:', error)
+      if (error.response) {
+        console.error('[API] Response status:', error.response.status)
+        console.error('[API] Response data:', error.response.data)
+      } else if (error.request) {
+        console.error('[API] Request made but no response received:', error.request)
+      } else {
+        console.error('[API] Error setting up request:', error.message)
+      }
+      throw error
+    }
   },
 
   processVendorB2C: async (data: {

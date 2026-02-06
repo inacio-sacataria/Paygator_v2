@@ -15,11 +15,22 @@ const Payments = () => {
   const loadPayments = async () => {
     try {
       setLoading(true)
+      console.log('[Payments] Loading payments with filters:', { ...filters, page })
       const data = await dashboardApi.getPayments({ ...filters, page })
+      console.log('[Payments] Received data:', data)
       setPayments(data.payments || [])
       setTotalPages(data.totalPages || 1)
+      
+      if (!data.payments || data.payments.length === 0) {
+        console.warn('[Payments] No payments found in response')
+      }
     } catch (error) {
-      console.error('Error loading payments:', error)
+      console.error('[Payments] Error loading payments:', error)
+      if (error instanceof Error) {
+        console.error('[Payments] Error message:', error.message)
+        console.error('[Payments] Error stack:', error.stack)
+      }
+      // Manter os pagamentos existentes em caso de erro
     } finally {
       setLoading(false)
     }
@@ -107,7 +118,12 @@ const Payments = () => {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</div>
       ) : payments.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>Nenhum pagamento encontrado</div>
+        <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+          <div style={{ marginBottom: '1rem' }}>Nenhum pagamento encontrado</div>
+          <div style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
+            Verifique o Console do navegador (F12) para mais detalhes
+          </div>
+        </div>
       ) : (
         <>
           <div style={{ background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
