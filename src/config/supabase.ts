@@ -10,18 +10,25 @@ export const supabase = createClient(
 );
 
 // Create PostgreSQL client for direct database access
-export const pgClient = new Client({
-  host: process.env['SUPABASE_HOST'] || 'db.llrcdfutvjrrccgytbjh.supabase.co',
-  port: parseInt(process.env['SUPABASE_PORT'] || '5432', 10),
-  database: process.env['SUPABASE_DATABASE'] || 'postgres',
-  user: process.env['SUPABASE_USER'] || 'postgres',
-  password: process.env['SUPABASE_PASSWORD'] || '.7K8.PfQWJH@#-d',
-  ssl: {
-    rejectUnauthorized: false
-  },
-  // Configurações adicionais para melhor conectividade
-  connectionTimeoutMillis: 10000
-});
+// Prefer DATABASE_URL (e.g. Render PostgreSQL); fallback to Supabase env vars
+const databaseUrl = process.env['DATABASE_URL'];
+export const pgClient = new Client(
+  databaseUrl
+    ? {
+        connectionString: databaseUrl,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 15000,
+      }
+    : {
+        host: process.env['SUPABASE_HOST'] || 'db.llrcdfutvjrrccgytbjh.supabase.co',
+        port: parseInt(process.env['SUPABASE_PORT'] || '5432', 10),
+        database: process.env['SUPABASE_DATABASE'] || 'postgres',
+        user: process.env['SUPABASE_USER'] || 'postgres',
+        password: process.env['SUPABASE_PASSWORD'] || '.7K8.PfQWJH@#-d',
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10000,
+      }
+);
 
 // Database service class for Supabase operations
 export class SupabaseService {

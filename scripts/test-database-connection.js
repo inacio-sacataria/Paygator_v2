@@ -1,19 +1,27 @@
+require('dotenv').config();
 const { Client } = require('pg');
 
 async function testDatabaseConnection() {
   console.log('🧪 Testando conexão com o banco de dados...');
-  
-  const client = new Client({
-    host: process.env.SUPABASE_HOST || 'db.llrcdfutvjrrccgytbjh.supabase.co',
-    port: parseInt(process.env.SUPABASE_PORT || '5432', 10),
-    database: process.env.SUPABASE_DATABASE || 'postgres',
-    user: process.env.SUPABASE_USER || 'postgres',
-    password: process.env.SUPABASE_PASSWORD || '.7K8.PfQWJH@#-d',
-    ssl: {
-      rejectUnauthorized: false
-    },
-    connectionTimeoutMillis: 10000
-  });
+
+  const databaseUrl = process.env.DATABASE_URL;
+  const client = new Client(
+    databaseUrl
+      ? {
+          connectionString: databaseUrl,
+          ssl: { rejectUnauthorized: false },
+          connectionTimeoutMillis: 15000,
+        }
+      : {
+          host: process.env.SUPABASE_HOST || 'db.llrcdfutvjrrccgytbjh.supabase.co',
+          port: parseInt(process.env.SUPABASE_PORT || '5432', 10),
+          database: process.env.SUPABASE_DATABASE || 'postgres',
+          user: process.env.SUPABASE_USER || 'postgres',
+          password: process.env.SUPABASE_PASSWORD || '.7K8.PfQWJH@#-d',
+          ssl: { rejectUnauthorized: false },
+          connectionTimeoutMillis: 10000,
+        }
+  );
 
   try {
     console.log('📡 Tentando conectar...');
