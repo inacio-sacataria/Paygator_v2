@@ -13,13 +13,13 @@ async function testDatabaseConnection() {
           connectionTimeoutMillis: 15000,
         }
       : {
-          host: process.env.SUPABASE_HOST || 'db.llrcdfutvjrrccgytbjh.supabase.co',
+          host: process.env.SUPABASE_HOST || 'db.rpngvbwrrewforclansy.supabase.co',
           port: parseInt(process.env.SUPABASE_PORT || '5432', 10),
           database: process.env.SUPABASE_DATABASE || 'postgres',
           user: process.env.SUPABASE_USER || 'postgres',
-          password: process.env.SUPABASE_PASSWORD || '.7K8.PfQWJH@#-d',
+          password: process.env.SUPABASE_PASSWORD || '',
           ssl: { rejectUnauthorized: false },
-          connectionTimeoutMillis: 10000,
+          connectionTimeoutMillis: 15000,
         }
   );
 
@@ -60,15 +60,19 @@ async function testDatabaseConnection() {
       address: error.address,
       port: error.port
     });
-    
-    // Sugestões de solução
-    console.log('\n💡 Sugestões para resolver:');
-    console.log('1. Verifique se as variáveis de ambiente estão configuradas corretamente');
-    console.log('2. Verifique se o host do Supabase está acessível');
-    console.log('3. Verifique se as credenciais estão corretas');
-    console.log('4. Verifique se há firewall bloqueando a conexão');
-    console.log('5. Tente usar uma VPN se estiver em rede corporativa');
-    
+
+    if (error.code === 'EHOSTUNREACH' && String(error.address || '').includes(':')) {
+      console.log('\n💡 Erro IPv6 (rede inacessível). Usa o Connection pooler do Supabase (IPv4):');
+      console.log('   1. Dashboard Supabase → Project Settings → Database');
+      console.log('   2. Em "Connection string" escolhe "Session mode" (pooler)');
+      console.log('   3. Copia a URI e define DATABASE_URL no .env com essa URI');
+      console.log('   Ex.: postgresql://postgres.REF:PASSWORD@aws-0-XX.pooler.supabase.com:5432/postgres');
+    } else {
+      console.log('\n💡 Sugestões:');
+      console.log('1. Verifique SUPABASE_PASSWORD ou DATABASE_URL no .env');
+      console.log('2. Supabase: usa a connection string "Session mode" (pooler) para IPv4');
+      console.log('3. Firewall/rede: verifique se o porto 5432 está acessível');
+    }
     process.exit(1);
   }
 }

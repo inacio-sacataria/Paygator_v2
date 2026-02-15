@@ -1,4 +1,4 @@
-import { sqliteService } from './sqliteService';
+import { dataService } from './dataService';
 import { loggingService } from './loggingService';
 import { logger } from '../utils/logger';
 
@@ -37,6 +37,8 @@ export interface Payment {
   iframe_link: string;
   created_at: string;
   updated_at: string;
+  vendor_id?: string;
+  vendor_name?: string;
 }
 
 export interface Order {
@@ -66,10 +68,10 @@ export class AdminService {
       const todayISO = today.toISOString();
       
       // Buscar estatísticas do SQLite
-      const stats = await sqliteService.getStatistics();
+      const stats = await dataService.getStatistics();
       
       // Calcular estatísticas específicas
-      const successfulPayments = stats.recentPayments.filter(p => p.status === 'approved').length;
+      const successfulPayments = stats.recentPayments.filter(p => p.status === 'approved' || p.status === 'completed').length;
       const pendingPayments = stats.recentPayments.filter(p => p.status === 'pending').length;
       const failedPayments = stats.recentPayments.filter(p => p.status === 'failed').length;
       
@@ -120,8 +122,10 @@ export class AdminService {
       const offset = (page - 1) * limit;
 
       // Buscar pagamentos do SQLite
-      const payments = await sqliteService.getPayments(limit, offset);
-      
+      const payments = await dataService.getPayments(limit, offset);
+      const vendors = await dataService.getVendors(500, 0);
+      const vendorMap = new Map(vendors.map(v => [v.vendor_id, v.name]));
+
       // Filtrar por status se especificado
       let filteredPayments = payments;
       if (filter.status) {
@@ -146,23 +150,24 @@ export class AdminService {
         );
       }
 
-      // Converter para o formato esperado
+      // Converter para o formato esperado (inclui vendor_id para correlação com vendors)
       const formattedPayments: Payment[] = filteredPayments.map(p => ({
         id: p.id!,
         payment_id: p.payment_id,
-        external_payment_id: p.payment_id, // Usar payment_id como external_payment_id
+        external_payment_id: p.payment_id,
         amount: p.amount,
         currency: p.currency || 'BRL',
         payment_method: p.provider,
-        customer_email: 'demo@example.com', // Placeholder
-        customer_name: 'Demo Customer', // Placeholder
-        customer_phone: '+5511999999999', // Placeholder
+        customer_email: 'demo@example.com',
+        customer_name: 'Demo Customer',
+        customer_phone: '+5511999999999',
         status: p.status,
-        order_id: p.payment_id, // Usar payment_id como order_id
-        return_url: 'https://example.com/success', // Placeholder
-        iframe_link: `https://payment-gateway.com/pay/${p.payment_id}`, // Placeholder
+        order_id: p.payment_id,
+        return_url: 'https://example.com/success',
+        iframe_link: `https://payment-gateway.com/pay/${p.payment_id}`,
         created_at: p.created_at!,
-        updated_at: p.updated_at!
+        updated_at: p.updated_at!,
+        ...(p.vendor_id ? { vendor_id: p.vendor_id, vendor_name: vendorMap.get(p.vendor_id) || p.vendor_id } : {}),
       }));
 
       return {
@@ -242,7 +247,7 @@ export class AdminService {
       const offset = (page - 1) * limit;
       
       // Buscar pedidos do SQLite
-      const orders = await sqliteService.getPlayfoodOrders(limit, offset);
+      const orders = await dataService.getPlayfoodOrders(limit, offset);
       
       // Converter para o formato esperado
       const formattedOrders: Order[] = orders.map(o => ({
@@ -310,6 +315,16 @@ export class AdminService {
     successCount: number;
   }> {
     return await loggingService.getLogStats();
+  }
+
+  async getVendors(limit: number = 100, offset: number = 0): Promise<{ vendors: any[] }> {
+    const vendors = await dataService.getVendors(limit, offset);
+    return { vendors };
+  }
+
+  async getVendorPayouts(limit: number = 200): Promise<{ payouts: any[] }> {
+    const payouts = await dataService.getAllVendorPayouts(limit);
+    return { payouts };
   }
 }
 

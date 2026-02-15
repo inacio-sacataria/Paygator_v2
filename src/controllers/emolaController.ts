@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
 import { logger } from '../utils/logger';
-import { sqliteService } from '../services/sqliteService';
+import { dataService } from '../services/dataService';
+import { loggingService } from '../services/loggingService';
 import { AuthenticatedRequest } from '../middleware/logging';
 import { E2PaymentsService } from '../services/e2paymentsService';
+import { vendorPayoutService } from '../services/vendorPayoutService';
 import { config } from '../config/environment';
 
 export class EmolaController {
@@ -53,7 +55,7 @@ export class EmolaController {
         currency
       });
 
-      const existingPayment = await sqliteService.getPaymentById(paymentId);
+      const existingPayment = await dataService.getPaymentById(paymentId);
 
       if (!existingPayment) {
         res.status(404).json({
@@ -86,7 +88,7 @@ export class EmolaController {
       }
 
       // Atualizar status para processing
-      await sqliteService.updatePayment(paymentId, {
+      await dataService.updatePayment(paymentId, {
         status: 'processing',
         metadata: JSON.stringify({
           ...JSON.parse(existingPayment.metadata || '{}'),
@@ -98,6 +100,18 @@ export class EmolaController {
             currency: currency
           }
         })
+      });
+
+      await loggingService.logPayment({
+        paymentId,
+        action: 'status_changed',
+        previousStatus: existingPayment.status,
+        newStatus: 'processing',
+        amount: Number(amount),
+        currency,
+        ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+        correlationId: req.correlationId || 'unknown',
+        metadata: { provider: 'emola', type: 'c2b', phone },
       });
 
       // Gerar referência (máximo 27 caracteres)
@@ -137,7 +151,7 @@ export class EmolaController {
 
       if (paymentResult.success) {
         // Atualizar pagamento com sucesso
-        await sqliteService.updatePayment(paymentId, {
+        await dataService.updatePayment(paymentId, {
           status: 'completed',
           metadata: JSON.stringify({
             ...JSON.parse(existingPayment.metadata || '{}'),
@@ -150,6 +164,18 @@ export class EmolaController {
               responseData: paymentResult.data,
             }
           })
+        });
+
+        await loggingService.logPayment({
+          paymentId,
+          action: 'status_changed',
+          previousStatus: 'processing',
+          newStatus: 'completed',
+          amount: Number(amount),
+          currency,
+          ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+          correlationId: req.correlationId || 'unknown',
+          metadata: { provider: 'emola', type: 'c2b', transactionId: paymentResult.transactionId, reference },
         });
 
         logger.info('e-Mola payment processed successfully', {
@@ -172,7 +198,7 @@ export class EmolaController {
         });
       } else {
         // Atualizar pagamento com falha
-        await sqliteService.updatePayment(paymentId, {
+        await dataService.updatePayment(paymentId, {
           status: 'failed',
           metadata: JSON.stringify({
             ...JSON.parse(existingPayment.metadata || '{}'),
@@ -184,6 +210,19 @@ export class EmolaController {
               responseData: paymentResult.data,
             }
           })
+        });
+
+        await loggingService.logPayment({
+          paymentId,
+          action: 'failed',
+          previousStatus: 'processing',
+          newStatus: 'failed',
+          amount: Number(amount),
+          currency,
+          ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+          ...(paymentResult.message ? { errorMessage: paymentResult.message } : {}),
+          correlationId: req.correlationId || 'unknown',
+          metadata: { provider: 'emola', type: 'c2b', responseData: paymentResult.data },
         });
 
         logger.warn('e-Mola payment failed', {
@@ -244,7 +283,7 @@ export class EmolaController {
         transactionId
       });
 
-      const existingPayment = await sqliteService.getPaymentById(paymentId);
+      const existingPayment = await dataService.getPaymentById(paymentId);
 
       if (!existingPayment) {
         res.status(404).json({
@@ -256,17 +295,31 @@ export class EmolaController {
         return;
       }
 
-      await sqliteService.updatePayment(paymentId, {
-        status: status === 'success' ? 'completed' : 'failed',
+      const newStatus = status === 'success' ? 'completed' : 'failed';
+      await dataService.updatePayment(paymentId, {
+        status: newStatus,
         metadata: JSON.stringify({
           ...JSON.parse(existingPayment.metadata || '{}'),
           emola: {
             ...JSON.parse(existingPayment.metadata || '{}').emola,
-            status: status === 'success' ? 'completed' : 'failed',
+            status: newStatus,
             completedAt: new Date().toISOString(),
             callbackReceived: true
           }
         })
+      });
+
+      await loggingService.logPayment({
+        paymentId,
+        externalPaymentId: transactionId,
+        action: 'status_changed',
+        previousStatus: existingPayment.status,
+        newStatus,
+        amount: existingPayment.amount,
+        ...(existingPayment.currency ? { currency: existingPayment.currency } : {}),
+        ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+        correlationId: req.correlationId || 'unknown',
+        metadata: { provider: 'emola', type: 'c2b_callback', transactionId },
       });
 
       logger.info('Payment status updated successfully for e-Mola callback', {
@@ -337,7 +390,7 @@ export class EmolaController {
         currency
       });
 
-      const existingPayment = await sqliteService.getPaymentById(paymentId);
+      const existingPayment = await dataService.getPaymentById(paymentId);
 
       if (!existingPayment) {
         res.status(404).json({
@@ -370,7 +423,7 @@ export class EmolaController {
       }
 
       // Atualizar status para processing
-      await sqliteService.updatePayment(paymentId, {
+      await dataService.updatePayment(paymentId, {
         status: 'processing',
         metadata: JSON.stringify({
           ...JSON.parse(existingPayment.metadata || '{}'),
@@ -382,6 +435,18 @@ export class EmolaController {
             currency: currency
           }
         })
+      });
+
+      await loggingService.logPayment({
+        paymentId,
+        action: 'status_changed',
+        previousStatus: existingPayment.status,
+        newStatus: 'processing',
+        amount: Number(amount),
+        currency,
+        ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+        correlationId: req.correlationId || 'unknown',
+        metadata: { provider: 'emola', type: 'b2c', phone },
       });
 
       // Gerar referência (máximo 27 caracteres)
@@ -398,7 +463,7 @@ export class EmolaController {
 
       if (paymentResult.success) {
         // Atualizar pagamento com sucesso
-        await sqliteService.updatePayment(paymentId, {
+        await dataService.updatePayment(paymentId, {
           status: 'completed',
           metadata: JSON.stringify({
             ...JSON.parse(existingPayment.metadata || '{}'),
@@ -411,6 +476,18 @@ export class EmolaController {
               responseData: paymentResult.data,
             }
           })
+        });
+
+        await loggingService.logPayment({
+          paymentId,
+          action: 'status_changed',
+          previousStatus: 'processing',
+          newStatus: 'completed',
+          amount: Number(amount),
+          currency,
+          ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+          correlationId: req.correlationId || 'unknown',
+          metadata: { provider: 'emola', type: 'b2c', transactionId: paymentResult.transactionId, reference },
         });
 
         logger.info('e-Mola B2C payment processed successfully', {
@@ -434,7 +511,7 @@ export class EmolaController {
         });
       } else {
         // Atualizar pagamento com falha
-        await sqliteService.updatePayment(paymentId, {
+        await dataService.updatePayment(paymentId, {
           status: 'failed',
           metadata: JSON.stringify({
             ...JSON.parse(existingPayment.metadata || '{}'),
@@ -446,6 +523,19 @@ export class EmolaController {
               responseData: paymentResult.data,
             }
           })
+        });
+
+        await loggingService.logPayment({
+          paymentId,
+          action: 'failed',
+          previousStatus: 'processing',
+          newStatus: 'failed',
+          amount: Number(amount),
+          currency,
+          ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+          ...(paymentResult.message ? { errorMessage: paymentResult.message } : {}),
+          correlationId: req.correlationId || 'unknown',
+          metadata: { provider: 'emola', type: 'b2c', responseData: paymentResult.data },
         });
 
         logger.warn('e-Mola B2C payment failed', {
@@ -505,7 +595,7 @@ export class EmolaController {
         transactionId
       });
 
-      const existingPayment = await sqliteService.getPaymentById(paymentId);
+      const existingPayment = await dataService.getPaymentById(paymentId);
 
       if (!existingPayment) {
         res.status(404).json({
@@ -517,17 +607,31 @@ export class EmolaController {
         return;
       }
 
-      await sqliteService.updatePayment(paymentId, {
-        status: status === 'success' ? 'completed' : 'failed',
+      const newStatusB2C = status === 'success' ? 'completed' : 'failed';
+      await dataService.updatePayment(paymentId, {
+        status: newStatusB2C,
         metadata: JSON.stringify({
           ...JSON.parse(existingPayment.metadata || '{}'),
           emolaB2C: {
             ...JSON.parse(existingPayment.metadata || '{}').emolaB2C,
-            status: status === 'success' ? 'completed' : 'failed',
+            status: newStatusB2C,
             completedAt: new Date().toISOString(),
             callbackReceived: true
           }
         })
+      });
+
+      await loggingService.logPayment({
+        paymentId,
+        externalPaymentId: transactionId,
+        action: 'status_changed',
+        previousStatus: existingPayment.status,
+        newStatus: newStatusB2C,
+        amount: existingPayment.amount,
+        ...(existingPayment.currency ? { currency: existingPayment.currency } : {}),
+        ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+        correlationId: req.correlationId || 'unknown',
+        metadata: { provider: 'emola', type: 'b2c_callback', transactionId },
       });
 
       logger.info('Payment status updated successfully for e-Mola B2C callback', {
@@ -567,11 +671,11 @@ export class EmolaController {
 
   /**
    * Processa pagamento B2C ao vendor após pagamento C2B ser completado
-   * Calcula a comissão do sistema e envia o valor líquido ao vendor
+   * Usa vendorPayoutService (comissões gravadas em vendor_payouts)
    */
   public processVendorB2CPayment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      const { paymentId, commissionPercentage } = req.body;
+      const { paymentId, commissionPercentage, vendorPhone } = req.body;
 
       if (!paymentId) {
         res.status(400).json({
@@ -589,207 +693,43 @@ export class EmolaController {
         commissionPercentage
       });
 
-      // Buscar pagamento C2B original
-      const originalPayment = await sqliteService.getPaymentById(paymentId);
-
-      if (!originalPayment) {
-        res.status(404).json({
-          success: false,
-          message: 'Pagamento não encontrado',
-          timestamp: new Date().toISOString(),
-          correlation_id: req.correlationId || 'unknown'
-        });
-        return;
-      }
-
-      // Verificar se o pagamento C2B foi completado
-      if (originalPayment.status !== 'completed' && originalPayment.status !== 'approved') {
-        res.status(400).json({
-          success: false,
-          message: 'O pagamento C2B deve estar completado antes de processar o pagamento ao vendor',
-          timestamp: new Date().toISOString(),
-          correlation_id: req.correlationId || 'unknown'
-        });
-        return;
-      }
-
-      // Verificar se já foi pago ao vendor
-      const metadata = JSON.parse(originalPayment.metadata || '{}');
-      if (metadata.vendorB2CPayment && metadata.vendorB2CPayment.status === 'completed') {
-        res.status(400).json({
-          success: false,
-          message: 'Vendor já foi pago para este pagamento',
-          timestamp: new Date().toISOString(),
-          correlation_id: req.correlationId || 'unknown'
-        });
-        return;
-      }
-
-      // Obter informações do vendor do metadata
-      const orderDetails = metadata.orderDetails || {};
-      const internalData = orderDetails.internal || {};
-      const vendorMerchant = internalData.vendorMerchant || {};
-      const vendorShare = internalData.vendorShare || 100; // Porcentagem que o vendor recebe (0-100)
-      
-      // Usar commissionPercentage do request ou calcular baseado no vendorShare
-      let systemCommission: number;
-      if (commissionPercentage !== undefined && commissionPercentage !== null && commissionPercentage !== '') {
-        const parsedCommission = parseFloat(commissionPercentage.toString());
-        if (isNaN(parsedCommission)) {
-          res.status(400).json({
-            success: false,
-            message: 'Comissão deve ser um número válido',
-            timestamp: new Date().toISOString(),
-            correlation_id: req.correlationId || 'unknown'
-          });
-          return;
-        }
-        systemCommission = parsedCommission;
-      } else {
-        // Comissão do sistema = 100 - vendorShare
-        systemCommission = 100 - vendorShare;
-      }
-
-      // Validar comissão
-      if (systemCommission < 0 || systemCommission > 100) {
-        res.status(400).json({
-          success: false,
-          message: 'Comissão deve estar entre 0 e 100',
-          timestamp: new Date().toISOString(),
-          correlation_id: req.correlationId || 'unknown'
-        });
-        return;
-      }
-
-      // Calcular valores
-      const totalAmount = originalPayment.amount;
-      const vendorAmount = totalAmount * (vendorShare / 100);
-      const systemCommissionAmount = totalAmount * (systemCommission / 100);
-
-      // Obter telefone do vendor
-      const vendorPhone = vendorMerchant.phone || req.body.vendorPhone;
-      if (!vendorPhone) {
-        res.status(400).json({
-          success: false,
-          message: 'Telefone do vendor não encontrado. Forneça vendorPhone no request ou configure no vendorMerchant',
-          timestamp: new Date().toISOString(),
-          correlation_id: req.correlationId || 'unknown'
-        });
-        return;
-      }
-
-      // Validar formato do telefone
-      const phoneNumber = vendorPhone.replace(/^\+258/, '');
-      if (!phoneNumber.match(/^(86|87)[0-9]{7}$/)) {
-        res.status(400).json({
-          success: false,
-          message: 'Formato de telefone inválido para Emola. Use número começando com 86 ou 87',
-          timestamp: new Date().toISOString(),
-          correlation_id: req.correlationId || 'unknown'
-        });
-        return;
-      }
-
-      // Atualizar metadata com informações do pagamento B2C
-      metadata.vendorB2CPayment = {
-        status: 'processing',
-        initiatedAt: new Date().toISOString(),
-        totalAmount: totalAmount,
-        vendorAmount: vendorAmount,
-        systemCommission: systemCommission,
-        systemCommissionAmount: systemCommissionAmount,
-        vendorShare: vendorShare,
-        vendorPhone: vendorPhone
+      const options: { correlationId: string; commissionPercentage?: number; vendorPhone?: string } = {
+        correlationId: req.correlationId || 'unknown',
       };
+      if (commissionPercentage != null && String(commissionPercentage).trim() !== '') {
+        options.commissionPercentage = parseFloat(String(commissionPercentage));
+      }
+      if (vendorPhone) options.vendorPhone = vendorPhone;
+      const result = await vendorPayoutService.processOneVendorB2C(paymentId, options);
 
-      await sqliteService.updatePayment(paymentId, {
-        metadata: JSON.stringify(metadata)
-      });
-
-      // Gerar referência única para o pagamento B2C
-      const reference = `VENDOR_${paymentId.substring(0, 20)}_${Date.now()}`.substring(0, 27);
-
-      // Processar pagamento B2C ao vendor
-      const paymentResult = await this.e2paymentsService.processEmolaB2CPayment({
-        phone: phoneNumber,
-        amount: vendorAmount,
-        reference: reference,
-      });
-
-      if (paymentResult.success) {
-        // Atualizar metadata com sucesso
-        metadata.vendorB2CPayment = {
-          ...metadata.vendorB2CPayment,
-          transactionId: paymentResult.transactionId || `vendor_b2c_${Date.now()}`,
-          status: 'completed',
-          completedAt: new Date().toISOString(),
-          reference: reference,
-          responseData: paymentResult.data,
-        };
-
-        await sqliteService.updatePayment(paymentId, {
-          metadata: JSON.stringify(metadata)
-        });
-
-        logger.info('Vendor B2C payment processed successfully', {
-          correlationId: req.correlationId,
-          paymentId,
-          transactionId: paymentResult.transactionId,
-          vendorAmount,
-          systemCommissionAmount,
-          vendorPhone
-        });
-
+      if (result.success && result.data) {
         res.status(200).json({
           success: true,
           message: 'Pagamento B2C ao vendor processado com sucesso',
           data: {
-            transactionId: paymentResult.transactionId,
+            transactionId: result.data.transactionId,
             status: 'completed',
-            reference: reference,
             type: 'B2C_VENDOR',
-            totalAmount: totalAmount,
-            vendorAmount: vendorAmount,
-            systemCommission: systemCommission,
-            systemCommissionAmount: systemCommissionAmount,
-            vendorShare: vendorShare
+            totalAmount: result.data.totalAmount,
+            vendorAmount: result.data.vendorAmount,
+            systemCommission: result.data.systemCommission,
+            systemCommissionAmount: result.data.systemCommissionAmount,
+            vendorShare: result.data.vendorShare
           },
           timestamp: new Date().toISOString(),
           correlation_id: req.correlationId || 'unknown'
         });
-      } else {
-        // Atualizar metadata com falha
-        metadata.vendorB2CPayment = {
-          ...metadata.vendorB2CPayment,
-          status: 'failed',
-          failedAt: new Date().toISOString(),
-          error: paymentResult.message,
-          responseData: paymentResult.data,
-        };
-
-        await sqliteService.updatePayment(paymentId, {
-          metadata: JSON.stringify(metadata)
-        });
-
-        logger.warn('Vendor B2C payment failed', {
-          correlationId: req.correlationId,
-          paymentId,
-          error: paymentResult.message,
-        });
-
-        res.status(400).json({
-          success: false,
-          message: paymentResult.message || 'Falha ao processar pagamento B2C ao vendor',
-          data: {
-            status: 'failed',
-            error: paymentResult.message,
-            type: 'B2C_VENDOR'
-          },
-          timestamp: new Date().toISOString(),
-          correlation_id: req.correlationId || 'unknown'
-        });
+        return;
       }
 
+      const statusCode = result.error === 'Pagamento não encontrado' ? 404 : (result.error?.includes('já foi pago') || result.error?.includes('deve estar completado') || result.error?.includes('Telefone') || result.error?.includes('Comissão') || result.error?.includes('Formato') ? 400 : 400);
+      res.status(statusCode).json({
+        success: false,
+        message: result.error || 'Falha ao processar pagamento B2C ao vendor',
+        data: result.data ? { status: 'failed', type: 'B2C_VENDOR' } : undefined,
+        timestamp: new Date().toISOString(),
+        correlation_id: req.correlationId || 'unknown'
+      });
     } catch (error) {
       logger.error('Error processing vendor B2C payment', {
         correlationId: req.correlationId,

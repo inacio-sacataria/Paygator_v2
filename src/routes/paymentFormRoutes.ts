@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import path from 'path';
-import { sqliteService } from '../services/sqliteService';
+import { dataService } from '../services/dataService';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -47,7 +47,7 @@ router.get('/:paymentId', async (req: Request, res: Response): Promise<void> => 
     // Buscar informações do pagamento no banco
     let payment;
     try {
-      payment = await sqliteService.getPaymentById(paymentId);
+      payment = await dataService.getPaymentById(paymentId);
     } catch (dbError) {
       logger.error('Database error when fetching payment', {
         paymentId,
@@ -269,7 +269,7 @@ router.get('/:paymentId/:amount/:currency', async (req: Request, res: Response):
     });
 
     // Buscar informações do pagamento no banco
-    const payment = await sqliteService.getPaymentById(paymentId);
+    const payment = await dataService.getPaymentById(paymentId);
     
     if (!payment) {
       logger.warn('Payment not found for form display with URL params', { paymentId });

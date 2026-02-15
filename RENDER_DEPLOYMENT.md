@@ -2,71 +2,88 @@
 
 Este guia explica como fazer o deploy da Paygator API no Render.
 
-## 📋 Pré-requisitos
+---
 
-- Conta no Render
-- Projeto Supabase configurado
-- Código fonte no GitHub
+## ⚡ Deploy rápido (API + PostgreSQL grupogo)
 
-## 🔧 Configuração no Render
+Já tens a base **grupogo** no Render. Segue estes passos para colocar a API no ar.
 
-### 1. Criar novo Web Service
+### 1. Criar Web Service no Render
 
-1. Acesse o [Render Dashboard](https://dashboard.render.com)
-2. Clique em "New +" → "Web Service"
-3. Conecte seu repositório GitHub
-4. Selecione o repositório do Paygator
+1. Abre [dashboard.render.com](https://dashboard.render.com)
+2. **New +** → **Web Service**
+3. Liga o repositório GitHub e escolhe **Paygator_v2** (ou o repo onde está o projeto)
+4. Configura:
+   - **Name:** `paygator-api` (ou outro nome; a URL será `https://<name>.onrender.com`)
+   - **Region:** Oregon (ou o que preferires)
+   - **Runtime:** Node
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+   - **Instance Type:** Free (ou pago se quiseres)
 
-### 2. Configurações do Serviço
+### 2. Variáveis de ambiente obrigatórias
 
-**Nome:** `paygator-api` (ou o nome que preferir)
+Em **Environment** do serviço, adiciona (usa **Secret** para API_KEY, WEBHOOK_SECRET e DATABASE_URL):
 
-**Runtime:** `Node`
+| Key | Value | Notas |
+|-----|--------|--------|
+| `NODE_ENV` | `production` | |
+| `PORT` | `10000` | Render define automaticamente; 10000 é o padrão |
+| `DATABASE_URL` | *(External Database URL do grupogo)* | No Render: PostgreSQL → grupogo → **External Database URL** |
+| `API_KEY` | *(a tua chave)* | Ex.: a que tens no `.env` local |
+| `WEBHOOK_SECRET` | *(o teu secret)* | Ex.: o que tens no `.env` local |
+| `BASE_URL` | `https://paygator-api.onrender.com` | Substitui pelo nome real do teu serviço |
 
-**Build Command:**
-```bash
-npm install && npm run build
+**DATABASE_URL** (copiar do Render, base grupogo):
+```
+postgresql://grupogo_user:PASSWORD@dpg-d652m4dum26s73birp60-a.oregon-postgres.render.com/grupogo
 ```
 
-**Start Command:**
-```bash
-npm start
-```
+### 3. Deploy
 
-**Port:** `3000`
+- Clica **Create Web Service**. O Render faz o build e o deploy.
+- No primeiro deploy o Free tier pode demorar 1–2 min a arrancar.
+- Testa: `https://<teu-serviço>.onrender.com/health`
 
-### 3. Variáveis de Ambiente
+### 4. (Opcional) Dashboard no mesmo projeto
 
-Adicione as seguintes variáveis de ambiente no Render:
+Para publicar o dashboard no Render como Static Site:
+
+1. **New +** → **Static Site**
+2. Mesmo repositório, **Root Directory** vazio (raiz)
+3. **Build Command:** `cd dashboard && npm install && npm run build`
+4. **Publish Directory:** `dashboard/dist`
+5. **Environment:** `VITE_API_URL` = `https://paygator-api.onrender.com` (URL da API)
+6. Em **ALLOWED_ORIGINS** da API, adiciona a URL do dashboard (ex.: `https://paygator-dashboard.onrender.com`)
+
+---
+
+## 🔧 Configuração detalhada (referência)
+
+### Variáveis de ambiente (lista completa)
 
 #### Configurações Básicas
 ```
 NODE_ENV=production
-PORT=3000
+PORT=10000
 API_VERSION=v1
 ```
 
-#### Segurança
+#### Segurança (definir no Render como Secret)
 ```
-WEBHOOK_SECRET=1a02aa5907a7bc447b392f07548cf2a0f7713be742787327e4c4302c6960ee24
-API_KEY=main_4c614d6eb046010889a8eaba36efc8e930c9656e9a4f6c553ca9cc667b267e1e
-PLAYFOOD_API_KEY=playfood_18414ed9a7e6696a91081d51c25895c32bfa9483bd959ae5
-JWT_SECRET=default-jwt-secret
-SESSION_SECRET=paygator-secret
-ADMIN_PASSWORD=admin123
+WEBHOOK_SECRET=<o teu webhook secret>
+API_KEY=<a tua API key>
+PLAYFOOD_API_KEY=<opcional>
+JWT_SECRET=<gerar um aleatório>
+SESSION_SECRET=<gerar um aleatório>
+ADMIN_PASSWORD=<password do admin>
 ```
 
-#### Supabase Configuration
+#### Base de dados (PostgreSQL Render - grupogo)
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://yrnaggnrbgetralcevqi.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybmFnZ25yYmdldHJhbGNldnFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NjExNjYsImV4cCI6MjA2NDQzNzE2Nn0.H7JdfyRK1-AFH0fn_rKa5nE2GurqH9O38JXBHXuyJyQ
-SUPABASE_HOST=db.llrcdfutvjrrccgytbjh.supabase.co
-SUPABASE_PORT=5432
-SUPABASE_DATABASE=postgres
-SUPABASE_USER=postgres
-SUPABASE_PASSWORD=.7K8.PfQWJH@#-d
-DATABASE_URL=postgresql://postgres:.7K8.PfQWJH@#-d@db.llrcdfutvjrrccgytbjh.supabase.co:5432/postgres
+DATABASE_URL=postgresql://grupogo_user:xxx@dpg-d652m4dum26s73birp60-a.oregon-postgres.render.com/grupogo
 ```
+*(Usar a External Database URL do painel do Render.)*
 
 #### Logging e Monitoramento
 ```

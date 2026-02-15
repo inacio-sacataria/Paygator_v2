@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { logger } from '../utils/logger';
-import { sqliteService } from '../services/sqliteService';
+import { dataService } from '../services/dataService';
+import { loggingService } from '../services/loggingService';
 import { AuthenticatedRequest } from '../middleware/logging';
 import { TheCodeService } from '../services/thecodeService';
 import { config } from '../config/environment';
@@ -55,7 +56,7 @@ export class MpesaController {
       });
 
       // Buscar pagamento no banco
-      const existingPayment = await sqliteService.getPaymentById(paymentId);
+      const existingPayment = await dataService.getPaymentById(paymentId);
       
       if (!existingPayment) {
         res.status(404).json({
@@ -89,7 +90,7 @@ export class MpesaController {
       }
 
       // Atualizar status para processing
-      await sqliteService.updatePayment(paymentId, {
+      await dataService.updatePayment(paymentId, {
         status: 'processing',
         metadata: JSON.stringify({
           ...JSON.parse(existingPayment.metadata || '{}'),
@@ -101,6 +102,18 @@ export class MpesaController {
             currency: currency
           }
         })
+      });
+
+      await loggingService.logPayment({
+        paymentId,
+        action: 'status_changed',
+        previousStatus: existingPayment.status,
+        newStatus: 'processing',
+        amount: Number(amount),
+        currency,
+        ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+        correlationId: req.correlationId || 'unknown',
+        metadata: { provider: 'mpesa', type: 'c2b', phone },
       });
 
       // Gerar referência única (máximo 15 caracteres para M-Pesa)
@@ -126,7 +139,7 @@ export class MpesaController {
 
       if (paymentResult.success) {
         // Atualizar pagamento com sucesso
-        await sqliteService.updatePayment(paymentId, {
+        await dataService.updatePayment(paymentId, {
           status: 'completed',
           metadata: JSON.stringify({
             ...JSON.parse(existingPayment.metadata || '{}'),
@@ -139,6 +152,18 @@ export class MpesaController {
               responseData: paymentResult.data,
             }
           })
+        });
+
+        await loggingService.logPayment({
+          paymentId,
+          action: 'status_changed',
+          previousStatus: 'processing',
+          newStatus: 'completed',
+          amount: Number(amount),
+          currency,
+          ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+          correlationId: req.correlationId || 'unknown',
+          metadata: { provider: 'mpesa', type: 'c2b', transactionId: paymentResult.transactionId, reference },
         });
 
         logger.info('M-Pesa payment processed successfully', {
@@ -162,7 +187,7 @@ export class MpesaController {
         });
       } else {
         // Atualizar pagamento com falha
-        await sqliteService.updatePayment(paymentId, {
+        await dataService.updatePayment(paymentId, {
           status: 'failed',
           metadata: JSON.stringify({
             ...JSON.parse(existingPayment.metadata || '{}'),
@@ -174,6 +199,19 @@ export class MpesaController {
               responseData: paymentResult.data,
             }
           })
+        });
+
+        await loggingService.logPayment({
+          paymentId,
+          action: 'failed',
+          previousStatus: 'processing',
+          newStatus: 'failed',
+          amount: Number(amount),
+          currency,
+          ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+          ...(paymentResult.message ? { errorMessage: paymentResult.message } : {}),
+          correlationId: req.correlationId || 'unknown',
+          metadata: { provider: 'mpesa', type: 'c2b', responseData: paymentResult.data },
         });
 
         logger.warn('M-Pesa payment failed', {
@@ -233,7 +271,7 @@ export class MpesaController {
       });
 
       // Buscar pagamento no banco
-      const existingPayment = await sqliteService.getPaymentById(paymentId);
+      const existingPayment = await dataService.getPaymentById(paymentId);
       
       if (!existingPayment) {
         res.status(404).json({
@@ -245,18 +283,31 @@ export class MpesaController {
         return;
       }
 
-      // Atualizar status do pagamento
-      await sqliteService.updatePayment(paymentId, {
-        status: status === 'success' ? 'completed' : 'failed',
+      const newStatus = status === 'success' ? 'completed' : 'failed';
+      await dataService.updatePayment(paymentId, {
+        status: newStatus,
         metadata: JSON.stringify({
           ...JSON.parse(existingPayment.metadata || '{}'),
           mpesa: {
             ...JSON.parse(existingPayment.metadata || '{}').mpesa,
-            status: status === 'success' ? 'completed' : 'failed',
+            status: newStatus,
             completedAt: new Date().toISOString(),
             callbackReceived: true
           }
         })
+      });
+
+      await loggingService.logPayment({
+        paymentId,
+        externalPaymentId: transactionId,
+        action: 'status_changed',
+        previousStatus: existingPayment.status,
+        newStatus,
+        amount: existingPayment.amount,
+        ...(existingPayment.currency ? { currency: existingPayment.currency } : {}),
+        ...(existingPayment.customer_id ? { customerEmail: existingPayment.customer_id } : {}),
+        correlationId: req.correlationId || 'unknown',
+        metadata: { provider: 'mpesa', type: 'c2b_callback', transactionId },
       });
 
       logger.info('Payment status updated successfully for M-Pesa callback', {

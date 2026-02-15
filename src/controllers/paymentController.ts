@@ -3,7 +3,7 @@ import { CreatePaymentRequest, CreatePaymentResponse } from '../types/payment';
 import { logger } from '../utils/logger';
 import { loggingService } from '../services/loggingService';
 import { AuthenticatedRequest } from '../middleware/logging';
-import { sqliteService } from '../services/sqliteService';
+import { dataService } from '../services/dataService';
 import { config } from '../config/environment';
 
 export class PaymentController {
@@ -96,13 +96,32 @@ export class PaymentController {
          orderId: paymentDataWithDefaults.orderDetails.orderId
        });
 
+       // Extrair vendor e upsert na tabela vendors
+      const vendorId = paymentDataWithDefaults.orderDetails.public?.vendorId || 'default_vendor';
+      const vendorMerchant = paymentDataWithDefaults.orderDetails.internal?.vendorMerchant;
+      const vendorShare = paymentDataWithDefaults.orderDetails.internal?.vendorShare ?? 85;
+      if (vendorMerchant) {
+        const vendorPayload: Parameters<typeof dataService.upsertVendor>[0] = {
+          vendor_id: vendorId,
+          name: vendorMerchant.name || paymentDataWithDefaults.orderDetails.public?.vendorName || vendorId,
+          vendor_share: vendorShare,
+        };
+        if (vendorMerchant.externalId != null) vendorPayload.external_id = String(vendorMerchant.externalId);
+        if (vendorMerchant.taxId != null) vendorPayload.tax_id = String(vendorMerchant.taxId);
+        if (vendorMerchant.phone != null) vendorPayload.phone = String(vendorMerchant.phone);
+        if (vendorMerchant.email != null) vendorPayload.email = String(vendorMerchant.email);
+        if (vendorMerchant.address != null) vendorPayload.address = JSON.stringify(vendorMerchant.address);
+        if (vendorMerchant.data != null) vendorPayload.data = JSON.stringify(vendorMerchant.data);
+        await dataService.upsertVendor(vendorPayload);
+      }
+
        // Simular processamento do pagamento
       const externalPaymentId = `ext_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Gerar link interno para o formulário de pagamento
       const internalPaymentLink = `${config.server.baseUrl}/payment-form/${paymentDataWithDefaults.paymentId}`;
 
-      // Salvar pagamento no Supabase
+      // Salvar pagamento (metadata inclui orderDetails para B2C e comissões)
       const paymentRecord = {
         payment_id: paymentDataWithDefaults.paymentId,
         external_payment_id: externalPaymentId,
@@ -117,31 +136,33 @@ export class PaymentController {
         updated_at: new Date().toISOString(),
         order_id: paymentDataWithDefaults.orderDetails.orderId,
         return_url: paymentDataWithDefaults.returnUrl,
-        iframe_link: internalPaymentLink
+        iframe_link: internalPaymentLink,
+        orderDetails: paymentDataWithDefaults.orderDetails
       };
 
-      const dbResult = await sqliteService.createPayment({
+      const dbResult = await dataService.createPayment({
         payment_id: paymentDataWithDefaults.paymentId,
         provider: paymentDataWithDefaults.paymentMethod,
         amount: paymentDataWithDefaults.amount,
         currency: paymentDataWithDefaults.currency,
         status: 'pending',
         customer_id: paymentDataWithDefaults.customer.external?.id || 'default_customer',
+        vendor_id: vendorId,
         metadata: JSON.stringify(paymentRecord)
       });
       
       if (dbResult) {
-        // Log do pagamento criado - temporariamente desabilitado (PostgreSQL -> SQLite)
-        // await loggingService.logPayment({
-        //   paymentId: paymentDataWithDefaults.paymentId,
-        //   externalPaymentId: externalPaymentId,
-        //   action: 'created',
-        //   newStatus: 'pending',
-        //   amount: paymentDataWithDefaults.amount,
-        //   currency: paymentDataWithDefaults.currency,
-        //   customerEmail: paymentDataWithDefaults.customer.email,
-        //   correlationId: req.correlationId || 'unknown'
-        // });
+        await loggingService.logPayment({
+          paymentId: paymentDataWithDefaults.paymentId,
+          externalPaymentId: externalPaymentId,
+          action: 'created',
+          newStatus: 'pending',
+          amount: paymentDataWithDefaults.amount,
+          currency: paymentDataWithDefaults.currency,
+          customerEmail: paymentDataWithDefaults.customer.email,
+          correlationId: req.correlationId || 'unknown',
+          metadata: { provider: paymentDataWithDefaults.paymentMethod, orderId: paymentDataWithDefaults.orderDetails?.orderId },
+        });
       } else {
         logger.warn('Failed to save payment to database, but continuing with response', {
           correlationId: req.correlationId,
@@ -215,7 +236,7 @@ export class PaymentController {
       });
 
       // Buscar pagamento no SQLite
-      const dbResult = await sqliteService.getPaymentById(paymentId);
+      const dbResult = await dataService.getPaymentById(paymentId);
       
       if (!dbResult) {
         logger.warn('Payment not found in database', {

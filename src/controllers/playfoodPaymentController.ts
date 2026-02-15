@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger';
-import { sqliteService } from '../services/sqliteService';
+import { dataService } from '../services/dataService';
 import {
   PlayfoodPaymentCreateRequest,
   PlayfoodPaymentCreateResponse,
@@ -239,7 +239,7 @@ export const getPaymentInfo = async (req: Request, res: Response): Promise<void>
     });
 
     // Buscar pagamento no banco e montar resposta real
-    const payment = await sqliteService.getPaymentById(requestData.paymentId);
+    const payment = await dataService.getPaymentById(requestData.paymentId);
     if (!payment) {
       res.status(404).json({
         success: false,

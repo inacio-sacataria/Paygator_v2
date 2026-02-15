@@ -123,6 +123,44 @@ const createTables = async (): Promise<void> => {
     )
   `);
 
+  // Tabela de vendors (extraída de orderDetails.internal.vendorMerchant)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS vendors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vendor_id TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      external_id TEXT,
+      tax_id TEXT,
+      phone TEXT,
+      email TEXT,
+      address TEXT,
+      vendor_share REAL DEFAULT 85,
+      data TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Tabela de comissões / payouts ao vendor (registo de cada distribuição B2C)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS vendor_payouts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      payment_id TEXT NOT NULL,
+      vendor_id TEXT NOT NULL,
+      total_amount REAL NOT NULL,
+      vendor_share_pct REAL NOT NULL,
+      system_commission_pct REAL NOT NULL,
+      system_commission_amount REAL NOT NULL,
+      vendor_amount REAL NOT NULL,
+      status TEXT DEFAULT 'pending',
+      b2c_transaction_id TEXT,
+      paid_at DATETIME,
+      error_message TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Tabela de sessões de admin
   await db.exec(`
     CREATE TABLE IF NOT EXISTS admin_sessions (

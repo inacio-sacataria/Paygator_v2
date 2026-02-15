@@ -7,7 +7,7 @@ import { authenticateApiKey } from '../middleware/authentication';
 import { logger } from '../utils/logger';
 import Joi from 'joi';
 import { AuthenticatedRequest } from '../middleware/logging';
-import { sqliteService } from '../services/sqliteService';
+import { dataService } from '../services/dataService';
 import { paymentInfoSchema } from '../models/playfoodValidationSchemas';
 
 const router = Router();
@@ -676,7 +676,7 @@ router.post('/:paymentId/confirm', async (req: Request, res: Response) => {
     }
     
     // Buscar pagamento no banco
-    const existingPayment = await sqliteService.getPaymentById(paymentId);
+    const existingPayment = await dataService.getPaymentById(paymentId);
     
     if (!existingPayment) {
       res.status(404).json({
@@ -688,7 +688,7 @@ router.post('/:paymentId/confirm', async (req: Request, res: Response) => {
     }
 
     // Atualizar status para completed
-    await sqliteService.updatePayment(paymentId, {
+    await dataService.updatePayment(paymentId, {
       status: 'completed',
       metadata: JSON.stringify({
         ...JSON.parse(existingPayment.metadata || '{}'),

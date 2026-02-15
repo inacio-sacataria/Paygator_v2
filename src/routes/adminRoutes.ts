@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { adminService } from '../services/adminService';
+import { vendorPayoutService } from '../services/vendorPayoutService';
+import { dataService } from '../services/dataService';
 import { logger } from '../utils/logger';
 import '../types/session';
 
@@ -182,6 +184,79 @@ router.get('/api/stats', requireAuth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to load dashboard stats'
+    });
+  }
+});
+
+// API endpoint for vendors list
+router.get('/api/vendors', requireAuth, async (req, res) => {
+  try {
+    const limit = parseInt(req.query['limit'] as string) || 100;
+    const offset = parseInt(req.query['offset'] as string) || 0;
+    const result = await adminService.getVendors(limit, offset);
+    res.json(result);
+  } catch (error) {
+    console.error('Error loading vendors:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load vendors'
+    });
+  }
+});
+
+// API endpoint for vendor payouts (comissões)
+router.get('/api/vendor-payouts', requireAuth, async (req, res) => {
+  try {
+    const limit = parseInt(req.query['limit'] as string) || 200;
+    const result = await adminService.getVendorPayouts(limit);
+    res.json(result);
+  } catch (error) {
+    console.error('Error loading vendor payouts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to load vendor payouts'
+    });
+  }
+});
+
+// API endpoint: distribute all completed payments to vendors (one click)
+router.post('/api/distribute-payments', requireAuth, async (req, res) => {
+  try {
+    const payments = await dataService.getCompletedPaymentsNotPaidToVendor();
+    const results: { paymentId: string; success: boolean; error?: string }[] = [];
+    let distributed = 0;
+    let failed = 0;
+
+    for (const p of payments) {
+      const result = await vendorPayoutService.processOneVendorB2C(p.payment_id, {
+        correlationId: 'admin-distribute',
+      });
+      results.push({
+        paymentId: p.payment_id,
+        success: result.success,
+        ...(result.error ? { error: result.error } : {}),
+      });
+      if (result.success) distributed++; else failed++;
+    }
+
+    logger.info('Distribute payments completed', { total: payments.length, distributed, failed });
+
+    res.json({
+      success: true,
+      message: `Processados ${payments.length} pagamento(s): ${distributed} distribuído(s), ${failed} falha(s).`,
+      data: {
+        total: payments.length,
+        distributed,
+        failed,
+        results,
+      },
+    });
+  } catch (error) {
+    logger.error('Error distributing payments', { error });
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao distribuir pagamentos',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
@@ -368,6 +443,21 @@ router.get('/payments', requireAuth, async (req, res) => {
       filters: {},
       query: req.query
     });
+  }
+});
+
+// Lista de vendors
+router.get('/vendors', requireAuth, async (req, res) => {
+  try {
+    const result = await adminService.getVendors(100, 0);
+    const payoutsResult = await adminService.getVendorPayouts(200);
+    res.render('admin/vendors', {
+      vendors: result.vendors,
+      payouts: payoutsResult.payouts,
+    });
+  } catch (error) {
+    console.error('Error loading vendors:', error);
+    res.render('admin/vendors', { vendors: [], payouts: [] });
   }
 });
 

@@ -1,3 +1,7 @@
+import dns from 'node:dns';
+// Preferir IPv4 na conexão ao Supabase (evita EHOSTUNREACH em redes sem IPv6)
+dns.setDefaultResultOrder('ipv4first');
+
 import App from './app';
 import { logger } from './utils/logger';
 

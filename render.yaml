@@ -1,12 +1,7 @@
-services:
-  # PostgreSQL Service
-  - type: postgresql
-    name: paygator-postgres
-    plan: starter
-    region: oregon
-    databaseName: paygator
-    user: paygator_user
+# Deploy Paygator: API + Dashboard
+# PostgreSQL: usar a base existente "grupogo" no Render e definir DATABASE_URL no dashboard (Environment).
 
+services:
   # Web Service - API Backend
   - type: web
     name: paygator-api
@@ -22,9 +17,11 @@ services:
       - key: BASE_URL
         value: https://paygator-api.onrender.com
       - key: API_KEY
-        value: main_4c614d6eb046010889a8eaba36efc8e930c9656e9a4f6c553ca9cc667b267e1e
+        sync: false
       - key: WEBHOOK_SECRET
-        value: 1a02aa5907a7bc447b392f07548cf2a0f7713be742787327e4c4302c6960ee24
+        sync: false
+      - key: DATABASE_URL
+        sync: false
       - key: LOG_LEVEL
         value: info
       - key: RATE_LIMIT_WINDOW_MS
@@ -38,7 +35,7 @@ services:
       - key: WEBHOOK_RETRY_DELAY_MS
         value: 5000
       - key: ALLOWED_ORIGINS
-        value: https://paygator-v2.onrender.com,https://paygator-dashboard.vercel.app,https://paygator-dashboard-*.vercel.app,http://localhost:3000,http://localhost:3001
+        value: https://paygator-api.onrender.com,https://paygator-dashboard.onrender.com,https://paygator-dashboard.vercel.app,http://localhost:3000,http://localhost:3001
       - key: ALLOWED_METHODS
         value: GET,POST,PUT,DELETE,OPTIONS
       - key: ALLOWED_HEADERS

@@ -256,6 +256,14 @@
             </a>
           </li>
           <li class="nav-item">
+            <a href="/admin/vendors" class="nav-link">
+              <svg class="nav-icon" viewBox="0 0 24 24">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+              </svg>
+              Vendors
+            </a>
+          </li>
+          <li class="nav-item">
             <a href="/admin/orders" class="nav-link">
               <svg class="nav-icon" viewBox="0 0 24 24">
                 <path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
@@ -369,6 +377,10 @@
           <p class="action-description">Visualizar histórico completo de pagamentos</p>
         </div>
         <div class="action-card">
+          <a href="/admin/vendors" class="action-link">Ver Vendors</a>
+          <p class="action-description">Lista de vendors e payouts (comissões)</p>
+        </div>
+        <div class="action-card">
           <a href="/admin/orders" class="action-link">Ver Pedidos</a>
           <p class="action-description">Gerenciar pedidos e status</p>
         </div>
@@ -376,6 +388,19 @@
           <a href="/admin/payments?status=pending" class="action-link">Pagamentos Pendentes</a>
           <p class="action-description">Revisar pagamentos aguardando</p>
         </div>
+      </div>
+
+      <!-- Distribuir todos os pagamentos concluídos aos vendors (um click) -->
+      <div class="distribute-section" style="margin-top: 2rem; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0;">
+        <h2 style="font-size: 1.5rem; font-weight: 600; color: #1e293b; margin-bottom: 1rem;">Distribuir pagamentos aos vendors</h2>
+        <p style="color: #64748b; margin-bottom: 1rem; font-size: 0.875rem;">
+          Envia todos os pagamentos com status <strong>concluído</strong> (completed/approved) que ainda não foram pagos ao vendor. O sistema calcula a comissão com base no vendorShare de cada pagamento e regista em Payouts.
+        </p>
+        <button type="button" id="distribute-all-btn" onclick="distributeAllPayments()"
+                style="padding: 0.75rem 1.5rem; background: #2563eb; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+          Distribuir todos os pagamentos concluídos
+        </button>
+        <div id="distribute-result" style="margin-top: 1rem; padding: 1rem; border-radius: 6px; display: none;"></div>
       </div>
 
       <!-- Seção B2C Payment ao Vendor -->
@@ -574,6 +599,46 @@
         submitBtn.textContent = 'Pagar Vendor (B2C)';
       }
     }
+
+    // Distribuir todos os pagamentos concluídos aos vendors
+    async function distributeAllPayments() {
+      const btn = document.getElementById('distribute-all-btn');
+      const resultDiv = document.getElementById('distribute-result');
+      if (!btn || !resultDiv) return;
+      btn.disabled = true;
+      btn.textContent = 'A processar...';
+      resultDiv.style.display = 'none';
+      try {
+        const response = await fetch('/admin/api/distribute-payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await response.json();
+        resultDiv.style.display = 'block';
+        if (data.success && data.data) {
+          resultDiv.style.background = '#dcfce7';
+          resultDiv.style.color = '#16a34a';
+          resultDiv.innerHTML = '<strong>' + data.message + '</strong><br>' +
+            'Total: ' + data.data.total + ' | Distribuídos: ' + data.data.distributed + ' | Falhas: ' + data.data.failed +
+            (data.data.results && data.data.results.length ? '<br><small>Detalhes: ' + data.data.results.map(function(r) {
+              return r.paymentId + ': ' + (r.success ? 'OK' : (r.error || 'erro'));
+            }).join('; ') + '</small>' : '');
+        } else {
+          resultDiv.style.background = '#fee2e2';
+          resultDiv.style.color = '#dc2626';
+          resultDiv.innerHTML = '<strong>Erro:</strong> ' + (data.message || data.error || 'Erro ao distribuir');
+        }
+      } catch (err) {
+        resultDiv.style.display = 'block';
+        resultDiv.style.background = '#fee2e2';
+        resultDiv.style.color = '#dc2626';
+        resultDiv.innerHTML = '<strong>Erro:</strong> ' + (err.message || 'Falha de rede');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Distribuir todos os pagamentos concluídos';
+      }
+    }
+    window.distributeAllPayments = distributeAllPayments;
 
     // Tornar a função global para poder ser chamada via onclick
     window.processVendorB2C = processVendorB2C;

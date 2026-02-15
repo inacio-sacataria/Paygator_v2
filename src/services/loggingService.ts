@@ -1,4 +1,4 @@
-import { pgClient } from '../config/supabase';
+import { sql, isDbConfigured } from '../config/db';
 import { logger } from '../utils/logger';
 
 export interface ApiLogData {
@@ -44,113 +44,102 @@ export interface AuthLogData {
 }
 
 export class LoggingService {
-  
-  // Log de chamadas da API
   async logApiCall(logData: ApiLogData): Promise<void> {
+    if (!sql || !isDbConfigured()) return;
     try {
-      const query = `
+      await sql`
         INSERT INTO api_logs (
-          correlation_id, method, url, ip_address, user_agent, 
+          correlation_id, method, url, ip_address, user_agent,
           api_key, webhook_signature, request_headers, request_body,
           response_status, response_body, response_time_ms, content_length,
           error_message, service_name, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+        ) VALUES (
+          ${logData.correlationId},
+          ${logData.method},
+          ${logData.url},
+          ${logData.ipAddress ?? null},
+          ${logData.userAgent ?? null},
+          ${logData.apiKey ?? null},
+          ${logData.webhookSignature ?? null},
+          ${logData.requestHeaders ? JSON.stringify(logData.requestHeaders) : null},
+          ${logData.requestBody ? JSON.stringify(logData.requestBody) : null},
+          ${logData.responseStatus ?? null},
+          ${logData.responseBody ?? null},
+          ${logData.responseTimeMs ?? null},
+          ${logData.contentLength ?? null},
+          ${logData.errorMessage ?? null},
+          ${logData.serviceName ?? 'paygator'},
+          NOW()
+        )
       `;
-      
-      const values = [
-        logData.correlationId,
-        logData.method,
-        logData.url,
-        logData.ipAddress,
-        logData.userAgent,
-        logData.apiKey,
-        logData.webhookSignature,
-        logData.requestHeaders ? JSON.stringify(logData.requestHeaders) : null,
-        logData.requestBody ? JSON.stringify(logData.requestBody) : null,
-        logData.responseStatus,
-        logData.responseBody,
-        logData.responseTimeMs,
-        logData.contentLength,
-        logData.errorMessage,
-        logData.serviceName || 'paygator'
-      ];
-
-      await pgClient.query(query, values);
       logger.debug('API log saved successfully', { correlationId: logData.correlationId });
     } catch (error) {
-      logger.error('Failed to save API log', { 
+      logger.error('Failed to save API log', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        correlationId: logData.correlationId 
+        correlationId: logData.correlationId,
       });
     }
   }
 
-  // Log de pagamentos
   async logPayment(logData: PaymentLogData): Promise<void> {
+    if (!sql || !isDbConfigured()) return;
     try {
-      const query = `
+      await sql`
         INSERT INTO payment_logs (
           payment_id, external_payment_id, action, previous_status, new_status,
-          amount, currency, customer_email, error_message, metadata, 
+          amount, currency, customer_email, error_message, metadata,
           correlation_id, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+        ) VALUES (
+          ${logData.paymentId},
+          ${logData.externalPaymentId ?? null},
+          ${logData.action},
+          ${logData.previousStatus ?? null},
+          ${logData.newStatus ?? null},
+          ${logData.amount ?? null},
+          ${logData.currency ?? null},
+          ${logData.customerEmail ?? null},
+          ${logData.errorMessage ?? null},
+          ${logData.metadata ? JSON.stringify(logData.metadata) : null},
+          ${logData.correlationId ?? null},
+          NOW()
+        )
       `;
-      
-      const values = [
-        logData.paymentId,
-        logData.externalPaymentId,
-        logData.action,
-        logData.previousStatus,
-        logData.newStatus,
-        logData.amount,
-        logData.currency,
-        logData.customerEmail,
-        logData.errorMessage,
-        logData.metadata ? JSON.stringify(logData.metadata) : null,
-        logData.correlationId
-      ];
-
-      await pgClient.query(query, values);
       logger.debug('Payment log saved successfully', { paymentId: logData.paymentId });
     } catch (error) {
-      logger.error('Failed to save payment log', { 
+      logger.error('Failed to save payment log', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        paymentId: logData.paymentId 
+        paymentId: logData.paymentId,
       });
     }
   }
 
-  // Log de autenticação
   async logAuth(logData: AuthLogData): Promise<void> {
+    if (!sql || !isDbConfigured()) return;
     try {
-      const query = `
+      await sql`
         INSERT INTO auth_logs (
-          correlation_id, api_key, ip_address, user_agent, action, 
+          correlation_id, api_key, ip_address, user_agent, action,
           status, error_message, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        ) VALUES (
+          ${logData.correlationId},
+          ${logData.apiKey ?? null},
+          ${logData.ipAddress ?? null},
+          ${logData.userAgent ?? null},
+          ${logData.action},
+          ${logData.status},
+          ${logData.errorMessage ?? null},
+          NOW()
+        )
       `;
-      
-      const values = [
-        logData.correlationId,
-        logData.apiKey,
-        logData.ipAddress,
-        logData.userAgent,
-        logData.action,
-        logData.status,
-        logData.errorMessage
-      ];
-
-      await pgClient.query(query, values);
       logger.debug('Auth log saved successfully', { correlationId: logData.correlationId });
     } catch (error) {
-      logger.error('Failed to save auth log', { 
+      logger.error('Failed to save auth log', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        correlationId: logData.correlationId 
+        correlationId: logData.correlationId,
       });
     }
   }
 
-  // Buscar logs de API
   async getApiLogs(filters: {
     correlationId?: string;
     method?: string;
@@ -167,89 +156,54 @@ export class LoggingService {
     page: number;
     totalPages: number;
   }> {
+    if (!sql || !isDbConfigured()) {
+      return { logs: [], total: 0, page: 1, totalPages: 1 };
+    }
     try {
       const page = filters.page || 1;
       const limit = filters.limit || 50;
       const offset = (page - 1) * limit;
 
-      let whereClause = 'WHERE 1=1';
-      const params: any[] = [];
-      let paramIndex = 1;
-
-      if (filters.correlationId) {
-        whereClause += ` AND correlation_id = $${paramIndex++}`;
-        params.push(filters.correlationId);
-      }
-
-      if (filters.method) {
-        whereClause += ` AND method = $${paramIndex++}`;
-        params.push(filters.method);
-      }
-
-      if (filters.url) {
-        whereClause += ` AND url ILIKE $${paramIndex++}`;
-        params.push(`%${filters.url}%`);
-      }
-
-      if (filters.apiKey) {
-        whereClause += ` AND api_key = $${paramIndex++}`;
-        params.push(filters.apiKey);
-      }
-
-      if (filters.status) {
-        whereClause += ` AND response_status = $${paramIndex++}`;
-        params.push(filters.status);
-      }
-
-      if (filters.dateFrom) {
-        whereClause += ` AND created_at >= $${paramIndex++}`;
-        params.push(filters.dateFrom.toISOString());
-      }
-
-      if (filters.dateTo) {
-        whereClause += ` AND created_at <= $${paramIndex++}`;
-        params.push(filters.dateTo.toISOString());
-      }
-
-      const query = `
-        SELECT * FROM api_logs 
-        ${whereClause}
-        ORDER BY created_at DESC 
-        LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-      `;
-      params.push(limit, offset);
-
-      const countQuery = `
-        SELECT COUNT(*) as total FROM api_logs 
-        ${whereClause}
-      `;
-
-      const [logsResult, countResult] = await Promise.all([
-        pgClient.query(query, params),
-        pgClient.query(countQuery, params.slice(0, -2))
+      const [logs, countResult] = await Promise.all([
+        sql`
+          SELECT * FROM api_logs
+          WHERE 1=1
+          ${filters.correlationId ? sql`AND correlation_id = ${filters.correlationId}` : sql``}
+          ${filters.method ? sql`AND method = ${filters.method}` : sql``}
+          ${filters.url ? sql`AND url ILIKE ${'%' + filters.url + '%'}` : sql``}
+          ${filters.apiKey ? sql`AND api_key = ${filters.apiKey}` : sql``}
+          ${filters.status !== undefined ? sql`AND response_status = ${filters.status}` : sql``}
+          ${filters.dateFrom ? sql`AND created_at >= ${filters.dateFrom.toISOString()}` : sql``}
+          ${filters.dateTo ? sql`AND created_at <= ${filters.dateTo.toISOString()}` : sql``}
+          ORDER BY created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+        sql`
+          SELECT COUNT(*)::int as total FROM api_logs
+          WHERE 1=1
+          ${filters.correlationId ? sql`AND correlation_id = ${filters.correlationId}` : sql``}
+          ${filters.method ? sql`AND method = ${filters.method}` : sql``}
+          ${filters.url ? sql`AND url ILIKE ${'%' + filters.url + '%'}` : sql``}
+          ${filters.apiKey ? sql`AND api_key = ${filters.apiKey}` : sql``}
+          ${filters.status !== undefined ? sql`AND response_status = ${filters.status}` : sql``}
+          ${filters.dateFrom ? sql`AND created_at >= ${filters.dateFrom.toISOString()}` : sql``}
+          ${filters.dateTo ? sql`AND created_at <= ${filters.dateTo.toISOString()}` : sql``}
+        `,
       ]);
 
-      const total = parseInt(countResult.rows[0].total);
-      const logs = logsResult.rows;
-
+      const total = Number(countResult[0]?.['total'] ?? 0);
       return {
-        logs,
+        logs: Array.isArray(logs) ? logs : [],
         total,
         page,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit) || 1,
       };
     } catch (error) {
       logger.error('Failed to get API logs', { error: error instanceof Error ? error.message : 'Unknown error' });
-      return {
-        logs: [],
-        total: 0,
-        page: 1,
-        totalPages: 1
-      };
+      return { logs: [], total: 0, page: 1, totalPages: 1 };
     }
   }
 
-  // Buscar logs de pagamentos
   async getPaymentLogs(filters: {
     paymentId?: string;
     action?: string;
@@ -263,74 +217,48 @@ export class LoggingService {
     page: number;
     totalPages: number;
   }> {
+    if (!sql || !isDbConfigured()) {
+      return { logs: [], total: 0, page: 1, totalPages: 1 };
+    }
     try {
       const page = filters.page || 1;
       const limit = filters.limit || 50;
       const offset = (page - 1) * limit;
 
-      let whereClause = 'WHERE 1=1';
-      const params: any[] = [];
-      let paramIndex = 1;
-
-      if (filters.paymentId) {
-        whereClause += ` AND payment_id = $${paramIndex++}`;
-        params.push(filters.paymentId);
-      }
-
-      if (filters.action) {
-        whereClause += ` AND action = $${paramIndex++}`;
-        params.push(filters.action);
-      }
-
-      if (filters.dateFrom) {
-        whereClause += ` AND created_at >= $${paramIndex++}`;
-        params.push(filters.dateFrom.toISOString());
-      }
-
-      if (filters.dateTo) {
-        whereClause += ` AND created_at <= $${paramIndex++}`;
-        params.push(filters.dateTo.toISOString());
-      }
-
-      const query = `
-        SELECT * FROM payment_logs 
-        ${whereClause}
-        ORDER BY created_at DESC 
-        LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-      `;
-      params.push(limit, offset);
-
-      const countQuery = `
-        SELECT COUNT(*) as total FROM payment_logs 
-        ${whereClause}
-      `;
-
-      const [logsResult, countResult] = await Promise.all([
-        pgClient.query(query, params),
-        pgClient.query(countQuery, params.slice(0, -2))
+      const [logs, countResult] = await Promise.all([
+        sql`
+          SELECT * FROM payment_logs
+          WHERE 1=1
+          ${filters.paymentId ? sql`AND payment_id = ${filters.paymentId}` : sql``}
+          ${filters.action ? sql`AND action = ${filters.action}` : sql``}
+          ${filters.dateFrom ? sql`AND created_at >= ${filters.dateFrom.toISOString()}` : sql``}
+          ${filters.dateTo ? sql`AND created_at <= ${filters.dateTo.toISOString()}` : sql``}
+          ORDER BY created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `,
+        sql`
+          SELECT COUNT(*)::int as total FROM payment_logs
+          WHERE 1=1
+          ${filters.paymentId ? sql`AND payment_id = ${filters.paymentId}` : sql``}
+          ${filters.action ? sql`AND action = ${filters.action}` : sql``}
+          ${filters.dateFrom ? sql`AND created_at >= ${filters.dateFrom.toISOString()}` : sql``}
+          ${filters.dateTo ? sql`AND created_at <= ${filters.dateTo.toISOString()}` : sql``}
+        `,
       ]);
 
-      const total = parseInt(countResult.rows[0].total);
-      const logs = logsResult.rows;
-
+      const total = Number(countResult[0]?.['total'] ?? 0);
       return {
-        logs,
+        logs: Array.isArray(logs) ? logs : [],
         total,
         page,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit) || 1,
       };
     } catch (error) {
       logger.error('Failed to get payment logs', { error: error instanceof Error ? error.message : 'Unknown error' });
-      return {
-        logs: [],
-        total: 0,
-        page: 1,
-        totalPages: 1
-      };
+      return { logs: [], total: 0, page: 1, totalPages: 1 };
     }
   }
 
-  // Estatísticas de logs
   async getLogStats(): Promise<{
     totalApiLogs: number;
     totalPaymentLogs: number;
@@ -341,6 +269,17 @@ export class LoggingService {
     errorCount: number;
     successCount: number;
   }> {
+    const empty = {
+      totalApiLogs: 0,
+      totalPaymentLogs: 0,
+      totalAuthLogs: 0,
+      todayApiLogs: 0,
+      todayPaymentLogs: 0,
+      todayAuthLogs: 0,
+      errorCount: 0,
+      successCount: 0,
+    };
+    if (!sql || !isDbConfigured()) return empty;
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -354,42 +293,33 @@ export class LoggingService {
         todayPaymentLogs,
         todayAuthLogs,
         errorCount,
-        successCount
+        successCount,
       ] = await Promise.all([
-        pgClient.query('SELECT COUNT(*) as total FROM api_logs'),
-        pgClient.query('SELECT COUNT(*) as total FROM payment_logs'),
-        pgClient.query('SELECT COUNT(*) as total FROM auth_logs'),
-        pgClient.query('SELECT COUNT(*) as total FROM api_logs WHERE created_at >= $1', [todayISO]),
-        pgClient.query('SELECT COUNT(*) as total FROM payment_logs WHERE created_at >= $1', [todayISO]),
-        pgClient.query('SELECT COUNT(*) as total FROM auth_logs WHERE created_at >= $1', [todayISO]),
-        pgClient.query('SELECT COUNT(*) as total FROM api_logs WHERE response_status >= 400'),
-        pgClient.query('SELECT COUNT(*) as total FROM api_logs WHERE response_status < 400')
+        sql`SELECT COUNT(*)::int as total FROM api_logs`,
+        sql`SELECT COUNT(*)::int as total FROM payment_logs`,
+        sql`SELECT COUNT(*)::int as total FROM auth_logs`,
+        sql`SELECT COUNT(*)::int as total FROM api_logs WHERE created_at >= ${todayISO}`,
+        sql`SELECT COUNT(*)::int as total FROM payment_logs WHERE created_at >= ${todayISO}`,
+        sql`SELECT COUNT(*)::int as total FROM auth_logs WHERE created_at >= ${todayISO}`,
+        sql`SELECT COUNT(*)::int as total FROM api_logs WHERE response_status >= 400`,
+        sql`SELECT COUNT(*)::int as total FROM api_logs WHERE response_status < 400`,
       ]);
 
       return {
-        totalApiLogs: parseInt(totalApiLogs.rows[0].total),
-        totalPaymentLogs: parseInt(totalPaymentLogs.rows[0].total),
-        totalAuthLogs: parseInt(totalAuthLogs.rows[0].total),
-        todayApiLogs: parseInt(todayApiLogs.rows[0].total),
-        todayPaymentLogs: parseInt(todayPaymentLogs.rows[0].total),
-        todayAuthLogs: parseInt(todayAuthLogs.rows[0].total),
-        errorCount: parseInt(errorCount.rows[0].total),
-        successCount: parseInt(successCount.rows[0].total)
+        totalApiLogs: Number(totalApiLogs[0]?.['total'] ?? 0),
+        totalPaymentLogs: Number(totalPaymentLogs[0]?.['total'] ?? 0),
+        totalAuthLogs: Number(totalAuthLogs[0]?.['total'] ?? 0),
+        todayApiLogs: Number(todayApiLogs[0]?.['total'] ?? 0),
+        todayPaymentLogs: Number(todayPaymentLogs[0]?.['total'] ?? 0),
+        todayAuthLogs: Number(todayAuthLogs[0]?.['total'] ?? 0),
+        errorCount: Number(errorCount[0]?.['total'] ?? 0),
+        successCount: Number(successCount[0]?.['total'] ?? 0),
       };
     } catch (error) {
       logger.error('Failed to get log stats', { error: error instanceof Error ? error.message : 'Unknown error' });
-      return {
-        totalApiLogs: 0,
-        totalPaymentLogs: 0,
-        totalAuthLogs: 0,
-        todayApiLogs: 0,
-        todayPaymentLogs: 0,
-        todayAuthLogs: 0,
-        errorCount: 0,
-        successCount: 0
-      };
+      return empty;
     }
   }
 }
 
-export const loggingService = new LoggingService(); 
+export const loggingService = new LoggingService();

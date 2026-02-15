@@ -83,12 +83,71 @@ export const dashboardApi = {
     commissionPercentage?: number
     vendorPhone?: string
   }) => {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-    const response = await axios.post(`${API_BASE_URL}/api/v1/payments/process-vendor-b2c`, data, {
+    const base = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+    const response = await axios.post(`${base}/api/v1/payments/process-vendor-b2c`, data, {
       withCredentials: true,
     })
     return response.data
   },
+
+  // Vendors e payouts (APIs do projeto raiz: /admin/api/*)
+  getVendors: async (params?: { limit?: number; offset?: number }) => {
+    const response = await api.get<{ vendors: Vendor[] }>('/vendors', { params })
+    return response.data
+  },
+
+  getVendorPayouts: async (params?: { limit?: number }) => {
+    const response = await api.get<{ payouts: VendorPayout[] }>('/vendor-payouts', { params })
+    return response.data
+  },
+
+  distributePayments: async () => {
+    const response = await api.post<DistributePaymentsResponse>('/distribute-payments')
+    return response.data
+  },
+}
+
+export interface Vendor {
+  id?: number
+  vendor_id: string
+  name: string
+  external_id?: string
+  tax_id?: string
+  phone?: string
+  email?: string
+  address?: string
+  vendor_share?: number
+  data?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface VendorPayout {
+  id?: number
+  payment_id: string
+  vendor_id: string
+  total_amount: number
+  vendor_share_pct: number
+  system_commission_pct: number
+  system_commission_amount: number
+  vendor_amount: number
+  status: string
+  b2c_transaction_id?: string
+  paid_at?: string
+  error_message?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface DistributePaymentsResponse {
+  success: boolean
+  message: string
+  data?: {
+    total: number
+    distributed: number
+    failed: number
+    results: { paymentId: string; success: boolean; error?: string }[]
+  }
 }
 
 export default api

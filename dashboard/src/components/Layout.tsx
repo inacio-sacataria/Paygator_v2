@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Home, CreditCard, ShoppingCart, FileText, LogOut } from 'lucide-react'
+import { Home, CreditCard, ShoppingCart, FileText, LogOut, Users } from 'lucide-react'
 
 const Layout = () => {
   const { logout } = useAuth()
@@ -59,6 +59,22 @@ const Layout = () => {
               >
                 <CreditCard size={20} style={{ marginRight: '0.75rem' }} />
                 Pagamentos
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/vendors"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0.75rem 2rem',
+                  color: isActive('/vendors') ? 'white' : '#cbd5e1',
+                  textDecoration: 'none',
+                  background: isActive('/vendors') ? '#334155' : 'transparent',
+                }}
+              >
+                <Users size={20} style={{ marginRight: '0.75rem' }} />
+                Vendors
               </Link>
             </li>
             <li>

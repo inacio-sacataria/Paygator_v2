@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vendors - Paygator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #334155; }
+    .container { display: flex; min-height: 100vh; }
+    .sidebar { width: 250px; background: #1e293b; color: white; padding: 2rem 0; position: fixed; height: 100vh; overflow-y: auto; }
+    .logo { padding: 0 2rem 2rem; border-bottom: 1px solid #334155; margin-bottom: 2rem; }
+    .logo-text { font-size: 1.5rem; font-weight: 700; color: #3b82f6; }
+    .nav-menu { list-style: none; }
+    .nav-item { margin-bottom: 0.5rem; }
+    .nav-link { display: flex; align-items: center; padding: 0.75rem 2rem; color: #cbd5e1; text-decoration: none; transition: all 0.2s; }
+    .nav-link:hover, .nav-link.active { background: #334155; color: white; }
+    .nav-icon { width: 20px; height: 20px; margin-right: 0.75rem; fill: currentColor; }
+    .main-content { flex: 1; margin-left: 250px; padding: 2rem; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .page-title { font-size: 2rem; font-weight: 600; color: #1e293b; }
+    .logout-btn { padding: 0.5rem 1rem; background: #ef4444; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem; font-weight: 500; }
+    .logout-btn:hover { background: #dc2626; }
+    .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; margin-bottom: 2rem; }
+    .card h2 { font-size: 1.25rem; margin-bottom: 1rem; color: #1e293b; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; font-weight: 600; color: #475569; }
+    .status-completed { color: #16a34a; }
+    .status-failed { color: #dc2626; }
+    .status-pending, .status-processing { color: #d97706; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <div class="logo"><div class="logo-text">Paygator</div></div>
+      <nav>
+        <ul class="nav-menu">
+          <li class="nav-item"><a href="/admin/" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Dashboard</a></li>
+          <li class="nav-item"><a href="/admin/payments" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>Pagamentos</a></li>
+          <li class="nav-item"><a href="/admin/vendors" class="nav-link active"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Vendors</a></li>
+          <li class="nav-item"><a href="/admin/orders" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>Pedidos</a></li>
+          <li class="nav-item"><a href="/admin/logs" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg>Logs</a></li>
+        </ul>
+      </nav>
+    </aside>
+    <main class="main-content">
+      <header class="header">
+        <h1 class="page-title">Vendors</h1>
+        <a href="/admin/logout" class="logout-btn">Sair</a>
+      </header>
+
+      <div class="card">
+        <h2>Lista de Vendors</h2>
+        <% if (vendors && vendors.length) { %>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Nome</th><th>Email</th><th>Telefone</th><th>Vendor Share %</th></tr>
+          </thead>
+          <tbody>
+            <% vendors.forEach(function(v) { %>
+            <tr>
+              <td><%= v.vendor_id %></td>
+              <td><%= v.name %></td>
+              <td><%= v.email || '-' %></td>
+              <td><%= v.phone || '-' %></td>
+              <td><%= (v.vendor_share ?? 85) %>%</td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+        <% } else { %>
+        <p style="color:#64748b;">Nenhum vendor registado.</p>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <h2>Payouts / Comissões</h2>
+        <% if (payouts && payouts.length) { %>
+        <table>
+          <thead>
+            <tr><th>Payment ID</th><th>Vendor</th><th>Total</th><th>Comissão Sistema</th><th>Valor Vendor</th><th>Status</th><th>Data</th></tr>
+          </thead>
+          <tbody>
+            <% payouts.forEach(function(p) { %>
+            <tr>
+              <td><%= p.payment_id %></td>
+              <td><%= p.vendor_id %></td>
+              <td><%= (p.total_amount / 100).toFixed(2) %></td>
+              <td><%= (p.system_commission_amount / 100).toFixed(2) %> (<%= p.system_commission_pct %>%)</td>
+              <td><%= (p.vendor_amount / 100).toFixed(2) %></td>
+              <td><span class="status-<%= p.status %>"><%= p.status %></span></td>
+              <td><%= p.paid_at ? new Date(p.paid_at).toLocaleString('pt-BR') : (p.created_at ? new Date(p.created_at).toLocaleString('pt-BR') : '-') %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+        <% } else { %>
+        <p style="color:#64748b;">Nenhum payout registado.</p>
+        <% } %>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

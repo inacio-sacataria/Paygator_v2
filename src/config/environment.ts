@@ -62,10 +62,9 @@ export const config = {
     dbName: process.env['MONGODB_DB_NAME'] || 'paygator',
     // Supabase configuration
     supabase: {
-      url: process.env['NEXT_PUBLIC_SUPABASE_URL'] || 'https://yrnaggnrbgetralcevqi.supabase.co',
-      anonKey: process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlybmFnZ25yYmdldHJhbGNldnFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NjExNjYsImV4cCI6MjA2NDQzNzE2Nn0.H7JdfyRK1-AFH0fn_rKa5nE2GurqH9O38JXBHXuyJyQ',
-      // PostgreSQL connection string
-      postgresUrl: process.env['DATABASE_URL'] || 'postgresql://postgres:.7K8.PfQWJH@#-d@db.llrcdfutvjrrccgytbjh.supabase.co:5432/postgres',
+      url: process.env['NEXT_PUBLIC_SUPABASE_URL'] || 'https://rpngvbwrrewforclansy.supabase.co',
+      anonKey: process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] || '',
+      postgresUrl: process.env['DATABASE_URL'] || '',
     },
   },
   redis: {

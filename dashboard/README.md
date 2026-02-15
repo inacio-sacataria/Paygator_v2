@@ -1,6 +1,22 @@
 # Paygator Dashboard - React Frontend
 
-Dashboard React para gerenciamento do Paygator.
+Dashboard React para gerenciamento do Paygator. **Usa as APIs do projeto raiz** (Paygator_v2).
+
+## Como correr (projeto raiz + dashboard)
+
+1. **Na raiz do repositório** (API):
+   ```bash
+   npm install && npm run dev
+   ```
+   API em `http://localhost:3000`.
+
+2. **Na pasta dashboard**:
+   ```bash
+   cd dashboard
+   npm install
+   npm run dev
+   ```
+   Dashboard em `http://localhost:3001`. O Vite faz proxy de `/admin` e `/api` para `http://127.0.0.1:3000`, ou usa `VITE_API_URL` se estiver definida.
 
 ## Configuração
 
