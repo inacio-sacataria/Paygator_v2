@@ -215,11 +215,13 @@ router.get('/api/stats', requireAdminOrApiKey, async (req, res) => {
   try {
     const stats = await adminService.getDashboardStats();
     res.json(stats);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading dashboard stats:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to load dashboard stats'
+      message: 'Failed to load dashboard stats',
+      // Expor o erro ajuda a diagnosticar problemas em Supabase/Postgres
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 });
