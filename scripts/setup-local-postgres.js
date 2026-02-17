@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS payments (
   customer_email VARCHAR(255),
   customer_name VARCHAR(255),
   customer_phone VARCHAR(50),
+  -- Campos usados pela app (modelo "novo")
+  provider TEXT,
+  customer_id TEXT,
+  vendor_id TEXT,
+  metadata TEXT,
   status VARCHAR(50) DEFAULT 'pending',
   order_id VARCHAR(255),
   return_url TEXT,

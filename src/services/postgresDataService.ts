@@ -18,6 +18,62 @@ function getSql() {
   return sql;
 }
 
+type InformationSchemaColumnRow = { column_name: string };
+
+async function ensurePaymentsTableSchema(): Promise<void> {
+  const s = getSql();
+  try {
+    const cols = (await s`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'payments'
+    `) as unknown as InformationSchemaColumnRow[];
+
+    if (!Array.isArray(cols) || cols.length === 0) {
+      // payments table may not exist yet; initSupabaseDataTables() will create it.
+      return;
+    }
+
+    const set = new Set(cols.map((c) => String(c.column_name)));
+
+    // Ensure columns required by the app's Payment model / insert statements exist
+    const required: Array<{ name: string; type: string }> = [
+      { name: 'provider', type: 'TEXT' },
+      { name: 'customer_id', type: 'TEXT' },
+      { name: 'vendor_id', type: 'TEXT' },
+      { name: 'metadata', type: 'TEXT' },
+      { name: 'return_url', type: 'TEXT' },
+      { name: 'iframe_link', type: 'TEXT' },
+    ];
+
+    for (const col of required) {
+      if (set.has(col.name)) continue;
+      await s.unsafe(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
+      logger.info('PostgreSQL schema updated: added payments column', { column: col.name });
+    }
+
+    // Optional backfill: if legacy column exists, use it to populate provider for old rows
+    if (set.has('payment_method')) {
+      try {
+        await s.unsafe(
+          `UPDATE payments SET provider = COALESCE(provider, payment_method) WHERE provider IS NULL AND payment_method IS NOT NULL`
+        );
+      } catch (err) {
+        logger.warn('Could not backfill payments.provider from payment_method', { err: err instanceof Error ? err.message : err });
+      }
+    }
+
+    // Helpful indexes used by the app
+    try {
+      await s.unsafe(`CREATE INDEX IF NOT EXISTS idx_payments_vendor_id ON payments(vendor_id)`);
+    } catch (err) {
+      logger.warn('Could not create idx_payments_vendor_id', { err: err instanceof Error ? err.message : err });
+    }
+  } catch (err) {
+    logger.warn('Could not ensure payments table schema', { err: err instanceof Error ? err.message : err });
+  }
+}
+
 /** Run init-supabase-data.sql statements to create tables if not exist */
 export async function initSupabaseDataTables(): Promise<void> {
   const fs = await import('fs');
@@ -41,6 +97,10 @@ export async function initSupabaseDataTables(): Promise<void> {
       logger.warn('Init SQL statement failed', { err: err instanceof Error ? err.message : err, stmt: stmt.substring(0, 80) });
     }
   }
+
+  // If payments table was created by older scripts (Render/local), it may be missing columns
+  // that the app expects (customer_id/provider/vendor_id/metadata/etc). Ensure it here.
+  await ensurePaymentsTableSchema();
   logger.info('Supabase data tables initialized');
 }
 
