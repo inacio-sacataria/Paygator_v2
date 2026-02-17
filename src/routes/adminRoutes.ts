@@ -5,15 +5,15 @@ import { vendorPayoutService } from '../services/vendorPayoutService';
 import { dataService } from '../services/dataService';
 import { logger } from '../utils/logger';
 import '../types/session';
+import { config } from '../config/environment';
 
 const router = Router();
 
 // Configuração simples de senha (em produção, use hash e banco)
 const ADMIN_PASSWORD = process.env['ADMIN_PASSWORD'] || 'admin123';
 
-// Middleware de autenticação simples
-// Para rotas HTML (/admin, /admin/vendors, etc) fazemos redirect para a página de login.
-// Para rotas de API (/admin/api/*) respondemos com JSON 401, para evitar devolver HTML onde o dashboard React espera JSON.
+// Middleware de autenticação simples baseado em sessão
+// Mantido para rotas HTML (/admin, /admin/vendors, etc)
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (req.session && req.session.admin) {
     return next();
@@ -31,8 +31,28 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
     });
   }
 
-  // Comportamento antigo para o dashboard EJS (que não vamos mais usar)
   return res.redirect('/admin/login');
+}
+
+// Novo middleware: aceita OU sessão de admin OU X-API-Key válida
+function requireAdminOrApiKey(req: Request, res: Response, next: NextFunction) {
+  // 1) Se já tem sessão de admin, deixa passar
+  if (req.session && req.session.admin) {
+    return next();
+  }
+
+  // 2) Tenta autenticar via X-API-Key
+  const apiKey = req.headers['x-api-key'] as string | undefined;
+
+  if (apiKey && config.security.apiKeys.includes(apiKey)) {
+    return next();
+  }
+
+  // 3) Caso nenhum dos dois funcione, responder 401 em JSON (são rotas /admin/api/*)
+  return res.status(401).json({
+    success: false,
+    message: 'Admin authentication required (session or valid X-API-Key)',
+  });
 }
 
 // Página de login
@@ -191,7 +211,7 @@ router.get('/api/auth/check', (req, res) => {
 });
 
 // API endpoint for dashboard stats
-router.get('/api/stats', requireAuth, async (req, res) => {
+router.get('/api/stats', requireAdminOrApiKey, async (req, res) => {
   try {
     const stats = await adminService.getDashboardStats();
     res.json(stats);
@@ -205,7 +225,7 @@ router.get('/api/stats', requireAuth, async (req, res) => {
 });
 
 // API endpoint for vendors list
-router.get('/api/vendors', requireAuth, async (req, res) => {
+router.get('/api/vendors', requireAdminOrApiKey, async (req, res) => {
   try {
     const limit = parseInt(req.query['limit'] as string) || 100;
     const offset = parseInt(req.query['offset'] as string) || 0;
@@ -221,7 +241,7 @@ router.get('/api/vendors', requireAuth, async (req, res) => {
 });
 
 // API endpoint for vendor payouts (comissões)
-router.get('/api/vendor-payouts', requireAuth, async (req, res) => {
+router.get('/api/vendor-payouts', requireAdminOrApiKey, async (req, res) => {
   try {
     const limit = parseInt(req.query['limit'] as string) || 200;
     const result = await adminService.getVendorPayouts(limit);
@@ -278,7 +298,7 @@ router.post('/api/distribute-payments', requireAuth, async (req, res) => {
 });
 
 // API endpoint for payments list
-router.get('/api/payments', async (req, res) => {
+router.get('/api/payments', requireAdminOrApiKey, async (req, res) => {
   try {
     const page = parseInt(req.query['page'] as string) || 1;
     const status = req.query['status'] as string;
@@ -309,7 +329,7 @@ router.get('/api/payments', async (req, res) => {
 });
 
 // API endpoint for API logs
-router.get('/api/logs', async (req, res) => {
+router.get('/api/logs', requireAdminOrApiKey, async (req, res) => {
   try {
     const page = parseInt(req.query['page'] as string) || 1;
     const method = req.query['method'] as string;
@@ -342,7 +362,7 @@ router.get('/api/logs', async (req, res) => {
 });
 
 // API endpoint for payment logs
-router.get('/api/payment-logs', async (req, res) => {
+router.get('/api/payment-logs', requireAdminOrApiKey, async (req, res) => {
   try {
     const page = parseInt(req.query['page'] as string) || 1;
     const paymentId = req.query['paymentId'] as string;
@@ -373,7 +393,7 @@ router.get('/api/payment-logs', async (req, res) => {
 });
 
 // API endpoint for log statistics
-router.get('/api/log-stats', async (req, res) => {
+router.get('/api/log-stats', requireAdminOrApiKey, async (req, res) => {
   try {
     const stats = await adminService.getLogStats();
 
