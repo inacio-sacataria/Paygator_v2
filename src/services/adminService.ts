@@ -61,52 +61,48 @@ export class AdminService {
   
   async getDashboardStats(): Promise<DashboardStats> {
     try {
-      logger.info('Getting dashboard stats from SQLite...');
+      logger.info('Getting dashboard stats from database...');
       
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const todayISO = today.toISOString();
       
-      // Buscar estatísticas do SQLite
+      // Buscar estatísticas do dataService (Postgres ou SQLite)
       const stats = await dataService.getStatistics();
       
       // Calcular estatísticas específicas
-      const successfulPayments = stats.recentPayments.filter(p => p.status === 'approved' || p.status === 'completed').length;
-      const pendingPayments = stats.recentPayments.filter(p => p.status === 'pending').length;
-      const failedPayments = stats.recentPayments.filter(p => p.status === 'failed').length;
-      
-      const totalAmount = stats.recentPayments.reduce((sum, p) => sum + p.amount, 0);
-      const todayPayments = stats.recentPayments.filter(p => 
-        new Date(p.created_at!).toDateString() === today.toDateString()
+      const successfulPayments = stats.recentPayments.filter(
+        (p) => p.status === 'approved' || p.status === 'completed'
       ).length;
-      const todayAmount = stats.recentPayments.filter(p => 
-        new Date(p.created_at!).toDateString() === today.toDateString()
-      ).reduce((sum, p) => sum + p.amount, 0);
+      const pendingPayments = stats.recentPayments.filter((p) => p.status === 'pending').length;
+      const failedPayments = stats.recentPayments.filter((p) => p.status === 'failed').length;
+      
+      const totalAmount = stats.recentPayments.reduce(
+        (sum, p) => sum + (Number(p.amount) || 0),
+        0
+      );
+      const todayPayments = stats.recentPayments.filter(
+        (p) => new Date(p.created_at!).toDateString() === today.toDateString()
+      ).length;
+      const todayAmount = stats.recentPayments
+        .filter((p) => new Date(p.created_at!).toDateString() === today.toDateString())
+        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-      const dashboardStats = {
+      const dashboardStats: DashboardStats = {
         totalPayments: stats.totalPayments,
-        totalAmount: totalAmount,
+        totalAmount,
         successfulPayments,
         pendingPayments,
         failedPayments,
         todayPayments,
-        todayAmount
+        todayAmount,
       };
 
       logger.info('Dashboard stats retrieved successfully:', dashboardStats);
       return dashboardStats;
     } catch (error) {
-      logger.error('Error getting dashboard stats, using demo data:', { error });
-      // Retornar dados de demonstração quando não há conexão com o banco
-      return {
-        totalPayments: 3,
-        totalAmount: 17325, // R$ 173.25 em centavos
-        successfulPayments: 2,
-        pendingPayments: 1,
-        failedPayments: 0,
-        todayPayments: 3,
-        todayAmount: 17325
-      };
+      logger.error('Error getting dashboard stats', { error });
+      // Propagar erro para o controller devolver 500 em vez de dados estáticos
+      throw error;
     }
   }
 
