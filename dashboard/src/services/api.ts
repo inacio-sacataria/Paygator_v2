@@ -2,11 +2,16 @@ import axios from 'axios'
 
 // Usar URL completa para garantir que vá para o backend
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const DASHBOARD_API_KEY = 'main_70a3ae2d414936451d05d19f7ca4b01c1761ee04b519b93961f56fa2a27cc914';
 
-// Aviso se a variável não estiver configurada em produção
+// Avisos em produção
 if (!import.meta.env.VITE_API_URL && import.meta.env.MODE === 'production') {
   console.error('[API] ⚠️ VITE_API_URL não está configurada! Configure no Vercel: Settings → Environment Variables');
   console.error('[API] Usando fallback:', API_BASE_URL);
+}
+
+if (!DASHBOARD_API_KEY) {
+  console.warn('[API] ⚠️ VITE_API_KEY não está configurada. As rotas /admin/api vão depender apenas de sessão (cookies).');
 }
 
 const api = axios.create({
@@ -14,6 +19,9 @@ const api = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    ...(DASHBOARD_API_KEY
+      ? { 'X-API-Key': DASHBOARD_API_KEY }
+      : {}),
   },
 })
 
