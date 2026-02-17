@@ -183,12 +183,12 @@ const VendorB2CForm = ({ initialPaymentId, initialCommission, initialPhone }: Ve
               <br />
               <strong>Valores:</strong>
               <br />
-              Valor Total: MT {((result.data.totalAmount || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              Valor Total: MT {(result.data.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               <br />
-              Valor ao Vendor: MT {((result.data.vendorAmount || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              Valor ao Vendor: MT {(result.data.vendorAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               <br />
               Comissão do Sistema: {result.data.systemCommission || 'N/A'}% (MT{' '}
-              {((result.data.systemCommissionAmount || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+              {(result.data.systemCommissionAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
             </div>
           )}
         </div>

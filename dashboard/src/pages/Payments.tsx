@@ -166,7 +166,7 @@ const Payments = () => {
                       </span>
                     </td>
                     <td style={{ padding: '1rem' }}>
-                      MT {((payment.amount || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      MT {(payment.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td style={{ padding: '1rem' }}>{payment.payment_method || 'N/A'}</td>
                     <td style={{ padding: '1rem' }}>

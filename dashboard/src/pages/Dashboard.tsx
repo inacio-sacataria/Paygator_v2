@@ -85,7 +85,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Valor Total"
-          value={`MT ${((stats?.totalAmount || 0) / 100).toLocaleString('pt-BR')}`}
+          value={`MT ${(stats?.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
           subtitle="Receita total"
           icon={<TrendingUp size={24} />}
           color="#16a34a"
@@ -114,7 +114,7 @@ const Dashboard = () => {
         <StatCard
           title="Hoje"
           value={stats?.todayPayments || 0}
-          subtitle={`MT ${((stats?.todayAmount || 0) / 100).toLocaleString('pt-BR')} hoje`}
+          subtitle={`MT ${(stats?.todayAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} hoje`}
           icon={<Calendar size={24} />}
           color="#3b82f6"
         />

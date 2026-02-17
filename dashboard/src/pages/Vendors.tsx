@@ -117,9 +117,9 @@ const Vendors = () => {
                   <tr key={p.id ?? p.payment_id + p.vendor_id}>
                     <td style={{ padding: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>{p.payment_id}</td>
                     <td style={{ padding: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>{p.vendor_id}</td>
-                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>{(p.total_amount / 100).toFixed(2)}</td>
-                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>{(p.system_commission_amount / 100).toFixed(2)} ({p.system_commission_pct}%)</td>
-                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>{(p.vendor_amount / 100).toFixed(2)}</td>
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>{p.total_amount.toFixed(2)}</td>
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>{p.system_commission_amount.toFixed(2)} ({p.system_commission_pct}%)</td>
+                    <td style={{ padding: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>{p.vendor_amount.toFixed(2)}</td>
                     <td
                       style={{
                         padding: '0.75rem',
