@@ -12,11 +12,27 @@ const router = Router();
 const ADMIN_PASSWORD = process.env['ADMIN_PASSWORD'] || 'admin123';
 
 // Middleware de autenticação simples
+// Para rotas HTML (/admin, /admin/vendors, etc) fazemos redirect para a página de login.
+// Para rotas de API (/admin/api/*) respondemos com JSON 401, para evitar devolver HTML onde o dashboard React espera JSON.
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (req.session && req.session.admin) {
     return next();
   }
-  res.redirect('/admin/login');
+
+  const wantsJson =
+    req.path.startsWith('/api') ||
+    req.headers['x-requested-with'] === 'XMLHttpRequest' ||
+    req.headers['accept']?.includes('application/json');
+
+  if (wantsJson) {
+    return res.status(401).json({
+      success: false,
+      message: 'Admin authentication required',
+    });
+  }
+
+  // Comportamento antigo para o dashboard EJS (que não vamos mais usar)
+  return res.redirect('/admin/login');
 }
 
 // Página de login
