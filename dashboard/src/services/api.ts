@@ -158,5 +158,81 @@ export interface DistributePaymentsResponse {
   }
 }
 
+// Logs / monitoring
+export interface ApiLog {
+  id?: number
+  correlation_id: string
+  method: string
+  url: string
+  ip_address?: string
+  user_agent?: string
+  api_key?: string
+  response_status?: number
+  response_time_ms?: number
+  error_message?: string
+  created_at: string
+}
+
+export interface PaymentLog {
+  id?: number
+  payment_id: string
+  external_payment_id?: string
+  action: 'created' | 'updated' | 'status_changed' | 'failed'
+  previous_status?: string
+  new_status?: string
+  amount?: number
+  currency?: string
+  customer_email?: string
+  error_message?: string
+  created_at: string
+}
+
+export interface LogStats {
+  totalApiLogs: number
+  totalPaymentLogs: number
+  totalAuthLogs: number
+  todayApiLogs: number
+  todayPaymentLogs: number
+  todayAuthLogs: number
+  errorCount: number
+  successCount: number
+}
+
+export interface PaginatedLogs<T> {
+  logs: T[]
+  total: number
+  page: number
+  totalPages: number
+}
+
+export const logsApi = {
+  getStats: async (): Promise<LogStats> => {
+    const response = await api.get<LogStats>('/log-stats')
+    return response.data
+  },
+
+  getApiLogs: async (params?: {
+    page?: number
+    method?: string
+    status?: number
+    dateFrom?: string
+    dateTo?: string
+  }): Promise<PaginatedLogs<ApiLog>> => {
+    const response = await api.get<PaginatedLogs<ApiLog>>('/logs', { params })
+    return response.data
+  },
+
+  getPaymentLogs: async (params?: {
+    page?: number
+    action?: string
+    paymentId?: string
+    dateFrom?: string
+    dateTo?: string
+  }): Promise<PaginatedLogs<PaymentLog>> => {
+    const response = await api.get<PaginatedLogs<PaymentLog>>('/payment-logs', { params })
+    return response.data
+  },
+}
+
 export default api
 
