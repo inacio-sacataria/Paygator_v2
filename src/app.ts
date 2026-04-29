@@ -15,6 +15,8 @@ import playfoodRoutes from './routes/playfoodRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import playfoodPaymentRoutes from './routes/playfoodPaymentRoutes';
 import paymentFormRoutes from './routes/paymentFormRoutes';
+import driverCheckoutRoutes from './routes/driverCheckoutRoutes';
+import driverCheckoutPageRoutes from './routes/driverCheckoutPageRoutes';
 import path from 'path';
 import session from 'express-session';
 import bodyParser from 'body-parser';
@@ -591,6 +593,10 @@ class App {
 
     // Rotas para formulário de pagamento interno
     this.app.use('/payment-form', paymentFormRoutes);
+    this.app.use('/driver-checkout', driverCheckoutPageRoutes);
+
+    // API routes - Driver self checkout
+    this.app.use(`/api/${config.server.apiVersion}/driver-checkout`, driverCheckoutRoutes);
 
     // API routes - PlayFood Payment Provider (API completa)
     // IMPORTANTE: Esta rota é mais genérica (/api/v1), então deve vir DEPOIS das rotas específicas

@@ -38,6 +38,7 @@ docker-compose.override.yml
 *.swp
 *.bak
 *.tmp
+graphify-out/
 
 # SQLite database
 data/

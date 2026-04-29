@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recarregar Carteira do Driver</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #0f172a;
+    }
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 24px 64px rgba(15, 23, 42, 0.25);
+      padding: 32px;
+    }
+    .hero {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      color: #111827;
+    }
+    .hero p {
+      color: #4b5563;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .notice {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 22px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .form-group { margin-bottom: 18px; }
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #1f2937;
+      font-size: 14px;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 16px;
+      background: #fff;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+    .phone-row {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      gap: 10px;
+    }
+    .prefix {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      background: #f9fafb;
+      font-weight: 700;
+      color: #374151;
+    }
+    .providers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .provider {
+      border: 2px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 14px;
+      cursor: pointer;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      transition: .2s ease;
+      background: #f9fafb;
+    }
+    .provider.active {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    .provider img {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 10px;
+      padding: 4px;
+      border: 1px solid #e5e7eb;
+    }
+    .provider strong {
+      display: block;
+      font-size: 14px;
+      color: #111827;
+    }
+    .provider small {
+      color: #6b7280;
+      font-size: 12px;
+    }
+    .button {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 16px;
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .button:disabled {
+      opacity: .7;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      display: none;
+      line-height: 1.5;
+    }
+    .status.info { display: block; background: #eff6ff; color: #1d4ed8; }
+    .status.success { display: block; background: #ecfdf5; color: #166534; }
+    .status.error { display: block; background: #fef2f2; color: #b91c1c; }
+    .meta {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid #e5e7eb;
+      color: #6b7280;
+      font-size: 12px;
+      text-align: center;
+    }
+    @media (max-width: 560px) {
+      .card { padding: 22px; }
+      .providers { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="hero">
+      <h1>Checkout do Driver</h1>
+      <p>Recarregue a carteira usando o numero de telefone registado do motorista.</p>
+    </div>
+
+    <div class="notice">
+      O telefone identifica o driver automaticamente no ONDE.<br>
+      `84/85` usam M-Pesa e `86/87` usam e-Mola.
+    </div>
+
+    <form id="driverCheckoutForm">
+      <div class="form-group">
+        <label for="phone">Telefone do driver</label>
+        <div class="phone-row">
+          <div class="prefix">+258</div>
+          <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="9" placeholder="84xxxxxxx" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="amount">Valor</label>
+        <input id="amount" name="amount" type="number" min="1" step="0.01" value="<%= defaultAmount %>" required>
+      </div>
+
+      <div class="form-group">
+        <label for="provider">Metodo</label>
+        <select id="provider" name="provider">
+          <option value="mpesa">M-Pesa</option>
+          <option value="emola">e-Mola</option>
+        </select>
+        <div class="providers" id="providerCards">
+          <div class="provider active" data-provider="mpesa" id="provider-mpesa">
+            <img src="/images/mpesa.png" alt="M-Pesa">
+            <div><strong>M-Pesa</strong><small>Recomendado para 84 e 85</small></div>
+          </div>
+          <div class="provider" data-provider="emola" id="provider-emola">
+            <img src="/images/emola.webp" alt="e-Mola">
+            <div><strong>e-Mola</strong><small>Recomendado para 86 e 87</small></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="button" id="submitButton" type="submit">Recarregar carteira</button>
+    </form>
+
+    <div class="status" id="statusBox"></div>
+
+    <div class="meta">
+      Moeda: <%= defaultCurrency %> · O sistema cria invoice, cobra e faz commit automatico no ONDE.
+    </div>
+  </div>
+
+  <script id="driver-checkout-data" type="application/json">
+    {
+      "currency": "<%= defaultCurrency %>"
+    }
+  </script>
+  <script src="/js/driver-checkout.js?v=<%= Date.now() %>"></script>
+</body>
+</html>

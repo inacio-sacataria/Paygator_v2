@@ -1,0 +1,275 @@
+{
+  "info": {
+    "_postman_id": "8932a4a3-bc88-4c59-a5f3-c08c888e26dc",
+    "name": "Onde Driver API",
+    "description": "Collection para gestão de drivers",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "14578781"
+  },
+  "item": [
+    {
+      "name": "Get Drivers",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "ae191560-2482-4745-b082-82ed4e3ee931",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/company/{{companyId}}/driver",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "company",
+            "{{companyId}}",
+            "driver"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Driver By ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/company/{{companyId}}/driver/{{driverId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "company",
+            "{{companyId}}",
+            "driver",
+            "{{driverId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Request Driver Withdrawal Invoice",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"money\": {\n    \"amount\": 100,\n    \"currency\": \"USD\",\n    \"formattedName\": \"100 USD\"\n  },\n  \"comment\": \"Withdrawal request\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/company/{{companyId}}/driver/{{driverId}}/withdraw",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "company",
+            "{{companyId}}",
+            "driver",
+            "{{driverId}}",
+            "withdraw"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Request Driver TopUp Invoice",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"money\": {\n    \"amount\": 100,\n    \"currency\": \"USD\",\n    \"formattedName\": \"100 USD\"\n  },\n  \"comment\": \"TopUp request for driver {{driverId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/company/{{companyId}}/driver/{{driverId}}/topUp",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "company",
+            "{{companyId}}",
+            "driver",
+            "{{driverId}}",
+            "topUp"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"TopUp invoice request succeeded\", function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              "",
+              "let data = {};",
+              "try {",
+              "  data = pm.response.json();",
+              "} catch (e) {",
+              "  data = {};",
+              "}",
+              "",
+              "const invoiceId = data.invoiceId || data.id || (data.invoice && data.invoice.invoiceId) || (data.invoice && data.invoice.id);",
+              "if (invoiceId) {",
+              "  pm.collectionVariables.set(\"invoiceId\", invoiceId);",
+              "}",
+              "",
+              "const driverId = pm.variables.get(\"driverId\");",
+              "if (driverId) {",
+              "  pm.collectionVariables.set(\"lastDriverId\", driverId);",
+              "}",
+              "",
+              "if (driverId && invoiceId) {",
+              "  pm.collectionVariables.set(\"checkoutRef\", `driver:${driverId}|invoice:${invoiceId}`);",
+              "}",
+              "",
+              "console.log(\"driverId:\", driverId);",
+              "console.log(\"invoiceId:\", invoiceId);"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Commit Invoice",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"invoiceId\": \"{{invoiceId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/company/{{companyId}}/driver/{{driverId}}/commit",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "company",
+            "{{companyId}}",
+            "driver",
+            "{{driverId}}",
+            "commit"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const activeDriver = pm.variables.get(\"driverId\");",
+              "const lastDriver = pm.collectionVariables.get(\"lastDriverId\");",
+              "if (!activeDriver && lastDriver) {",
+              "  pm.collectionVariables.set(\"driverId\", lastDriver);",
+              "}",
+              "",
+              "const invoiceId = pm.variables.get(\"invoiceId\") || pm.collectionVariables.get(\"invoiceId\");",
+              "if (!invoiceId) {",
+              "  throw new Error(\"Missing invoiceId. Run 'Request Driver TopUp Invoice' first.\");",
+              "}",
+              "",
+              "const resolvedDriver = pm.variables.get(\"driverId\") || pm.collectionVariables.get(\"driverId\") || lastDriver;",
+              "if (resolvedDriver) {",
+              "  console.log(`Committing invoice ${invoiceId} for driver ${resolvedDriver}`);",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Commit succeeded\", function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api-sandbox.onde.app/v1"
+    },
+    {
+      "key": "companyId",
+      "value": "YOUR_COMPANY_ID"
+    },
+    {
+      "key": "driverId",
+      "value": "YOUR_DRIVER_ID"
+    },
+    {
+      "key": "token",
+      "value": "YOUR_TOKEN"
+    },
+    {
+      "key": "invoiceId",
+      "value": ""
+    },
+    {
+      "key": "lastDriverId",
+      "value": ""
+    },
+    {
+      "key": "checkoutRef",
+      "value": ""
+    }
+  ]
+}
