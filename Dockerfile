@@ -10,7 +10,8 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 
 # Instale TODAS as dependências (incluindo dev)
-RUN npm ci
+# `npm ci` falha no Render quando o lockfile fica inconsistente em dependências opcionais.
+RUN npm install
 
 # Copie o restante do código
 COPY . .
@@ -35,7 +36,7 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 # Instale apenas dependências de produção
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Crie diretório de logs
 RUN mkdir -p logs
