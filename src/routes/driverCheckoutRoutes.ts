@@ -40,6 +40,7 @@ const validateRequest = (schema: Joi.ObjectSchema) => {
 router.post('/topup', authenticateApiKey, validateRequest(checkoutSchema), controller.createTopUpCheckout);
 router.get('/:paymentId/status', authenticateApiKey, controller.getCheckoutStatus);
 router.post('/:paymentId/commit', authenticateApiKey, controller.retryCommit);
+router.post('/process-pending-commits', authenticateApiKey, controller.processPendingCommits);
 
 // Public endpoints for browser-based driver checkout
 router.post('/public/topup', validateRequest(checkoutSchema), controller.createTopUpCheckout);

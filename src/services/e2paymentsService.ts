@@ -31,6 +31,15 @@ export class E2PaymentsService {
     this.config = config;
   }
 
+  private isRetryableNetworkError(error: any): boolean {
+    const code = String(error?.code || '');
+    return ['ETIMEDOUT', 'ECONNABORTED', 'ECONNRESET', 'EAI_AGAIN', 'ENETUNREACH'].includes(code);
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   /**
    * Obtém token de acesso OAuth
    */
@@ -69,18 +78,42 @@ export class E2PaymentsService {
         formDataKeys: ['grant_type', 'client_id', 'client_secret'],
       });
 
-      // Usar authUrl para autenticação (não usar axiosInstance que tem baseURL diferente)
-      const response = await axios.post(
-        `${this.config.authUrl}/oauth/token`,
-        formData.toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-Requested-With': 'XMLHttpRequest', // Conforme exemplo do Postman
-          },
-          timeout: 60000, // 60 segundos
+      // Usar authUrl para autenticação com retry para instabilidades de rede
+      let response: any;
+      let lastError: any;
+      const authUrl = `${this.config.authUrl}/oauth/token`;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+          response = await axios.post(
+            authUrl,
+            formData.toString(),
+            {
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest', // Conforme exemplo do Postman
+              },
+              timeout: 60000, // 60 segundos
+            }
+          );
+          break;
+        } catch (err: any) {
+          lastError = err;
+          if (!this.isRetryableNetworkError(err) || attempt === 3) {
+            throw err;
+          }
+          logger.warn('E2Payments - Falha transitória na autenticação, novo retry', {
+            attempt,
+            nextAttemptInMs: 1000 * attempt,
+            code: err?.code,
+            message: err?.message,
+            url: authUrl,
+          });
+          await this.sleep(1000 * attempt);
         }
-      );
+      }
+      if (!response && lastError) {
+        throw lastError;
+      }
 
       const body = response.data;
       const token = body.access_token;
@@ -146,6 +179,9 @@ export class E2PaymentsService {
       let errorMessage = `Erro ao autenticar com E2Payments: ${error.message}`;
       if (error.response?.data) {
         errorMessage += `. Resposta da API: ${JSON.stringify(error.response.data)}`;
+      }
+      if (this.isRetryableNetworkError(error)) {
+        errorMessage = `Servico E2Payments indisponivel no momento (${error.code || 'NETWORK_ERROR'}). Tente novamente em instantes.`;
       }
       if (error.response?.status === 401) {
         errorMessage += '\n\n⚠️ ERRO 401 - Client authentication failed';

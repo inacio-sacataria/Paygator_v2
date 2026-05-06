@@ -210,6 +210,12 @@ class PostgresDataService {
     return (await s`SELECT * FROM payments WHERE provider = ${provider} ORDER BY created_at DESC LIMIT ${limit}`) as unknown as Payment[];
   }
 
+  async getPaymentsByStatuses(statuses: string[], limit = 100): Promise<Payment[]> {
+    const s = getSql();
+    if (statuses.length === 0) return [];
+    return (await s`SELECT * FROM payments WHERE status = ANY(${statuses}) ORDER BY created_at ASC LIMIT ${limit}`) as unknown as Payment[];
+  }
+
   async createPlayfoodOrder(order: PlayfoodOrder): Promise<number> {
     const s = getSql();
     const [row] = await s`

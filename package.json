@@ -22,6 +22,7 @@
     "setup-local-db": "node scripts/setup-local-postgres.js",
     "setup-docker": "node scripts/setup-local-docker.js",
     "start-docker": "powershell -ExecutionPolicy Bypass -File scripts/start-docker.ps1",
+    "process-driver-commits": "node scripts/process-driver-commits.js",
     "migrate-to-render": "node scripts/migrate-to-render-postgres.js",
     "test-migration": "node scripts/migrate-to-render-postgres.js test",
     "render-diagnostic": "node scripts/render-diagnostic.js",

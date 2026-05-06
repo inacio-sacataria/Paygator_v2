@@ -59,11 +59,21 @@ window.addEventListener('DOMContentLoaded', function () {
           return;
         }
 
-        if (data.status === 'failed' || data.commitStatus === 'failed') {
+        if (data.status === 'failed' || data.status === 'commit_failed' || data.commitStatus === 'failed') {
           clearInterval(timer);
           submitButton.disabled = false;
           submitButton.textContent = 'Recarregar carteira';
           setStatus('error', data.commitError || 'O pagamento falhou ou o commit nao foi concluido.');
+          return;
+        }
+
+        if (data.status === 'paid') {
+          setStatus('success', `Pagamento recebido com sucesso. Estamos a creditar a carteira... Payment ID: ${paymentId}`);
+          return;
+        }
+
+        if (data.status === 'committing' || data.commitStatus === 'processing') {
+          setStatus('info', `Pagamento confirmado. A atualizar o saldo na carteira... (${attempts}/${maxAttempts})`);
           return;
         }
 
@@ -150,7 +160,12 @@ window.addEventListener('DOMContentLoaded', function () {
         return;
       }
 
-      setStatus('info', `Pagamento iniciado com sucesso. Payment ID: ${paymentId}. A verificar o estado...`);
+      if (status === 'paid') {
+        setStatus('success', `Pagamento recebido com sucesso. Estamos a atualizar a carteira. Payment ID: ${paymentId}`);
+      } else {
+        setStatus('info', `Pagamento iniciado com sucesso. Payment ID: ${paymentId}. A verificar o estado...`);
+      }
+
       if (paymentId) {
         pollStatus(paymentId);
       } else {

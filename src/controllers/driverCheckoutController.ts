@@ -6,6 +6,8 @@ import { OndeDriverService } from '../services/ondeDriverService';
 import { TheCodeService } from '../services/thecodeService';
 import { E2PaymentsService } from '../services/e2paymentsService';
 import { config } from '../config/environment';
+import { driverCheckoutCommitService } from '../services/driverCheckoutCommitService';
+import axios from 'axios';
 
 type CheckoutProvider = 'mpesa' | 'emola';
 
@@ -82,7 +84,7 @@ export class DriverCheckoutController {
         return;
       }
 
-      const currency = 'MZN';
+      const currency = matchedDriver.wallet?.[0]?.currency || 'MZM';
       const invoiceId = await this.ondeService.requestTopUpInvoice(matchedDriver.driverId, amount, currency);
       const paymentId = `drv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -139,46 +141,69 @@ export class DriverCheckoutController {
         return;
       }
 
-      let commitStatus: 'completed' | 'failed' = 'completed';
-      let commitError: string | undefined;
-      try {
-        await this.ondeService.commitInvoice(matchedDriver.driverId, invoiceId);
-      } catch (error) {
-        commitStatus = 'failed';
-        commitError = error instanceof Error ? error.message : 'Erro desconhecido no commit ONDE';
-      }
-
-      const finalStatus = commitStatus === 'completed' ? 'completed' : 'processing';
       await dataService.updatePayment(paymentId, {
-        status: finalStatus,
+        status: 'paid',
         metadata: JSON.stringify({
           ...metadataObject,
           transactionId: paymentResult.transactionId || '',
           providerResponse: paymentResult.data,
           onde: {
             ...metadataObject.onde,
-            commitStatus,
-            commitError: commitError || null,
-            committedAt: commitStatus === 'completed' ? new Date().toISOString() : null,
+            commitStatus: 'pending',
+            commitError: null,
+            committedAt: null,
           },
         }),
       });
 
+      // Fire-and-forget best effort: the user gets a fast payment success response,
+      // then we continue the ONDE crediting flow immediately after.
+      setTimeout(() => {
+        void this.processOndeCommit(paymentId);
+      }, 0);
+
       res.status(200).json({
         success: true,
-        message: commitStatus === 'completed' ? 'Checkout concluido e saldo creditado.' : 'Pagamento concluido, commit pendente.',
+        message: 'Pagamento concluido com sucesso. Estamos a atualizar a carteira.',
         data: {
           paymentId,
           invoiceId,
           driverId: matchedDriver.driverId,
-          status: finalStatus,
-          commitStatus,
-          commitError,
+          status: 'paid',
+          commitStatus: 'pending',
+          commitError: null,
         },
         timestamp: new Date().toISOString(),
         correlation_id: req.correlationId || 'unknown',
       });
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const upstreamStatus = error.response?.status || 502;
+        const upstreamBody = error.response?.data;
+        const upstreamMessage =
+          (typeof upstreamBody === 'object' && upstreamBody && 'message' in upstreamBody
+            ? String((upstreamBody as { message?: unknown }).message)
+            : undefined) || error.message || 'Erro no provedor externo';
+
+        logger.error('Driver checkout upstream error', {
+          correlationId: req.correlationId,
+          status: upstreamStatus,
+          message: upstreamMessage,
+          data: upstreamBody,
+        });
+
+        res.status(upstreamStatus >= 400 && upstreamStatus < 500 ? 400 : 502).json({
+          success: false,
+          message: upstreamMessage,
+          errors: [upstreamMessage],
+          upstream_status: upstreamStatus,
+          upstream_data: upstreamBody || null,
+          timestamp: new Date().toISOString(),
+          correlation_id: req.correlationId || 'unknown',
+        });
+        return;
+      }
+
       logger.error('Driver checkout error', {
         correlationId: req.correlationId,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -269,37 +294,22 @@ export class DriverCheckoutController {
         return;
       }
 
-      const metadata = this.safeParse(payment.metadata);
-      const driverId = metadata.onde?.driverId;
-      const invoiceId = metadata.onde?.invoiceId;
-      if (!driverId || !invoiceId) {
-        res.status(400).json({
+      const result = await driverCheckoutCommitService.processPaymentCommit(paymentId);
+      if (!result.success && result.status !== 'skipped') {
+        res.status(500).json({
           success: false,
-          message: 'Este pagamento nao possui dados de commit ONDE.',
+          message: 'Falha ao executar commit.',
+          errors: [result.error || 'Unknown error'],
           timestamp: new Date().toISOString(),
           correlation_id: req.correlationId || 'unknown',
         });
         return;
       }
 
-      await this.ondeService.commitInvoice(driverId, invoiceId);
-      await dataService.updatePayment(paymentId, {
-        status: 'completed',
-        metadata: JSON.stringify({
-          ...metadata,
-          onde: {
-            ...metadata.onde,
-            commitStatus: 'completed',
-            commitError: null,
-            committedAt: new Date().toISOString(),
-          },
-        }),
-      });
-
       res.status(200).json({
         success: true,
         message: 'Commit executado com sucesso.',
-        data: { paymentId, driverId, invoiceId, commitStatus: 'completed' },
+        data: { paymentId, status: result.status },
         timestamp: new Date().toISOString(),
         correlation_id: req.correlationId || 'unknown',
       });
@@ -314,12 +324,44 @@ export class DriverCheckoutController {
     }
   };
 
+  public processPendingCommits = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const limit = Number(req.query['limit'] || 50);
+      const result = await driverCheckoutCommitService.processPendingCommits(limit);
+      res.status(200).json({
+        success: true,
+        message: `Processados ${result.processed} commit(s) pendentes.`,
+        data: result,
+        timestamp: new Date().toISOString(),
+        correlation_id: req.correlationId || 'unknown',
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Falha ao processar commits pendentes.',
+        errors: [error instanceof Error ? error.message : 'Unknown error'],
+        timestamp: new Date().toISOString(),
+        correlation_id: req.correlationId || 'unknown',
+      });
+    }
+  };
+
   private safeParse(metadata?: string): any {
     if (!metadata) return {};
     try {
       return JSON.parse(metadata);
     } catch {
       return {};
+    }
+  }
+
+  private async processOndeCommit(paymentId: string): Promise<void> {
+    const result = await driverCheckoutCommitService.processPaymentCommit(paymentId);
+    if (!result.success && result.status !== 'skipped') {
+      logger.error('Driver checkout ONDE commit failed', {
+        paymentId,
+        error: result.error || 'Unknown error',
+      });
     }
   }
 

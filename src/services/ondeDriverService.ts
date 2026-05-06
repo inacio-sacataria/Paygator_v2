@@ -35,7 +35,7 @@ export class OndeDriverService {
       baseURL: baseUrl,
       timeout: 30000,
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: token,
         'Content-Type': 'application/json',
       },
     });

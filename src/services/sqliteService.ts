@@ -254,6 +254,16 @@ export class SQLiteService {
     );
   }
 
+  async getPaymentsByStatuses(statuses: string[], limit: number = 100): Promise<Payment[]> {
+    const db = getDatabase();
+    if (statuses.length === 0) return [];
+    const placeholders = statuses.map(() => '?').join(', ');
+    return await db.all(
+      `SELECT * FROM payments WHERE status IN (${placeholders}) ORDER BY created_at ASC LIMIT ?`,
+      [...statuses, limit]
+    );
+  }
+
   // Playfood order operations
   async createPlayfoodOrder(order: PlayfoodOrder): Promise<number> {
     const db = getDatabase();
